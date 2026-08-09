@@ -1,0 +1,57 @@
+---
+title: "Company"
+type: company
+department:
+owner: Marko
+status: draft
+updated: 2026-08-09
+tags: [north-star]
+links: ["[[marketing-department]]", "[[sales-department]]"]
+---
+
+# ASSUMPTION — please confirm: name and industry below were inferred
+# from the screenshots you shared (aios.businessandfitness.dk). Correct
+# this file if that's wrong and I'll propagate the real name everywhere.
+
+name: "Business & Fitness"
+industry: "Growth agency for marketing agencies (appointment setting / lead generation)"
+
+icp: >
+  Marketing agencies doing $5k–$40k/month in revenue who want more
+  qualified sales appointments without building an outbound team
+  themselves.
+
+offers:
+  frontend:
+    name: "Growth Offer"
+    promise: "$5k–$20k in new monthly revenue for marketing agencies"
+    status: draft
+  backend:
+    name: "Appointment Engine"
+    promise: "40–60 qualified appointments per month"
+    status: draft
+
+# Draft — first pass only, needs Marko's real words.
+north_star: >
+  Every marketing agency we work with should be able to say outbound
+  stopped being their bottleneck.
+
+values:
+  - name: "Draft value 1"
+    note: "TODO — replace with a real value and why it matters here"
+  - name: "Draft value 2"
+    note: "TODO"
+
+promise: >
+  DRAFT — one sentence describing what a client can always expect from
+  working with us, regardless of package.
+
+guarantee: >
+  DRAFT — the specific, checkable thing we guarantee (e.g. "X qualified
+  appointments in Y days or we keep working for free").
+
+pricing:
+  status: draft
+  note: >
+    No real pricing tiers captured yet. Add tiers here as
+    `- name / price / what's included` once confirmed.

@@ -1,0 +1,35 @@
+---
+title: "Operations Department"
+type: department
+department: operations
+owner: Marko
+status: draft
+updated: 2026-08-09
+tags: [department, operations, fulfillment, customer-success]
+links: ["[[company]]", "[[sales-department]]"]
+---
+
+mission: >
+  Deliver on what Sales sold: fulfillment for client campaigns and
+  customer success for the agencies we work with, so the promise in
+  [[company]] holds up after the contract is signed.
+
+kpis:
+  - name: "Client retention"
+    target: "TODO"
+    status: draft
+  - name: "Appointments delivered vs. promised"
+    target: "TODO"
+    status: draft
+
+head_agent: null
+team:
+  - "[[marko]]"
+  - "[[sample-customer-success-lead]]"
+  - "[[sample-fulfillment-specialist]]"
+
+docs: []
+systems: []
+apps:
+  - "[[trello]]"
+  - "[[atlassian]]"
