@@ -6,7 +6,7 @@ owner: Marko
 status: active
 updated: 2026-08-09
 tags: [founder]
-links: ["[[company]]", "[[marketing-department]]", "[[sales-department]]", "[[human-resources-department]]", "[[operations-department]]", "[[finance-department]]"]
+links: ["[[company]]", "[[ceo-department]]", "[[marketing-department]]", "[[sales-department]]", "[[product-department]]", "[[human-resources-department]]", "[[operations-department]]", "[[finance-department]]"]
 ---
 
 # Marko

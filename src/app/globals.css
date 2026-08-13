@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f7f9;
+  --surface-hover: #f0f1f4;
+  --border: #e6e7eb;
+  --foreground: #15171c;
+  --text-dim: #6a6f78;
+  --text-faint: #9aa0aa;
+  --accent: #4a55c4;
+  --accent-strong: #383f9e;
+  --accent-wash: #eeeffa;
+  --on-accent: #ffffff;
+  --good: #1f9d6f;
+  --good-wash: #e7f6ef;
+  --warn: #c97a1e;
+  --warn-wash: #fbf0e1;
+  --critical: #d6483e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #111217;
+    --surface: #16181d;
+    --surface-2: #1c1f25;
+    --surface-hover: #23262d;
+    --border: #2b2e36;
+    --foreground: #ecedf0;
+    --text-dim: #9ca1ab;
+    --text-faint: #686d77;
+    --accent: #8890ee;
+    --accent-strong: #a2a9f3;
+    --accent-wash: #21243a;
+    --on-accent: #12131a;
+    --good: #3fc98a;
+    --good-wash: #16281f;
+    --warn: #e0964a;
+    --warn-wash: #2c2013;
+    --critical: #e96a60;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-wash: var(--accent-wash);
+  --color-on-accent: var(--on-accent);
+  --color-good: var(--good);
+  --color-good-wash: var(--good-wash);
+  --color-warn: var(--warn);
+  --color-warn-wash: var(--warn-wash);
+  --color-critical: var(--critical);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-plex-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}

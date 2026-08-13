@@ -1,0 +1,33 @@
+---
+title: "Product Department"
+type: department
+department: product
+owner: Marko
+status: draft
+updated: 2026-08-13
+tags: [department, product]
+links: ["[[company]]", "[[operations-department]]"]
+---
+
+# DRAFT — for a services agency, "Product" most likely means productizing
+# the offer itself: turning the Appointment Engine / Growth Offer into a
+# repeatable system (SOPs, tooling, this Company OS) rather than a
+# shippable software product. Correct this mission if that's wrong.
+
+mission: >
+  Turn how [[company]] delivers its offers into a repeatable system —
+  the SOPs, internal tools, and this Company OS itself — so quality
+  doesn't depend on any one person doing it from memory.
+
+kpis:
+  - name: "SOPs documented vs. needed"
+    target: "TODO"
+    status: draft
+
+head_agent: "[[head-of-product]]"
+team:
+  - "[[marko]]"
+
+docs: []
+systems: []
+apps: []

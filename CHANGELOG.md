@@ -36,3 +36,47 @@ matters here.
 **What's next:** Phase 2 — a read-only Next.js app that lists, renders,
 and searches everything in `/brain`, with backlinks. No editing yet,
 just a clean way to browse what's already here.
+
+## Phase 2 — Live reader app (2026-08-13)
+
+The app exists now. Run `npm run dev` and open `localhost:3000` — see
+`docs/how-to-run.md`.
+
+**What's in there:**
+
+- Real sidebar matching the reference product you sent screenshots of:
+  Work / Company / Departments / The Brain groups. Anything not built
+  yet is visibly greyed out with a "PHASE N" tag — nothing pretends to
+  work when it doesn't.
+- **Docs** — every file in `/brain` (34 total), keyword search, and a
+  backlinks panel on each doc showing what links to it.
+- **Teams & Members** — org roster grouped by department, read live
+  from `/brain/people`.
+- **Agents registry** — grouped by department, honestly labeled "not
+  running" (a real agent runtime is Phase 6, not this).
+- **Department pages** — mission, KPIs, team, apps, and lead agent for
+  each of the 7 departments.
+- **Training** — course list with a real (currently 0%) progress bar;
+  per-person tracking is Phase 4.
+- `npm run sync-brain` rebuilds the whole search index from `/brain` in
+  under a second — the database is disposable, `/brain` is not.
+
+**Departments changed:** added CEO and Product (your priority call),
+kept Labs and Tech out for now. 7 departments total, up from 5.
+
+**New in `/brain`:** 5 sample agent definitions (Chief Executive
+Officer, Chief Marketing Officer, Setter Assistant, Head of Sales, Head
+of Product) so the Agents registry isn't empty — all clearly marked
+SAMPLE, same rule as everything else.
+
+**Stack note:** Prisma 7 (the current default install) requires a new
+driver-adapter setup that would have added real complexity mid-build,
+so this pins Prisma 6.19.3 instead — same SQLite behavior the plan
+called for, without fighting a new config system. Also: `npm audit`
+flags 3 high-severity issues in build-time tooling (postcss, sharp)
+that only clear on a breaking Next.js 16 upgrade — left as-is since the
+plan pins Next.js 15, flagging here for visibility rather than silently
+upgrading.
+
+**What's next:** Phase 3 — Issues, Projects, Initiatives, and Inbox
+with real create/edit/delete, backed by the same SQLite database.
