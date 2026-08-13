@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "sync-brain": "tsx scripts/sync-brain.ts",
-    "predev": "npm run sync-brain",
-    "prebuild": "npm run sync-brain"
+    "predev": "prisma migrate deploy && npm run sync-brain",
+    "prebuild": "prisma migrate deploy && npm run sync-brain"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
