@@ -29,7 +29,7 @@ export async function Sidebar() {
           className="flex h-[26px] w-[26px] items-center justify-center rounded-lg font-mono text-[0.7rem] font-bold text-white shadow-[0_4px_14px_-4px_rgba(99,102,241,0.6)]"
           style={{ backgroundImage: "linear-gradient(135deg, #6366F1, #14B8A6)" }}
         >
-          B&amp;F
+          CO
         </span>
         <span className="text-[0.9rem] font-extrabold tracking-tight">Company OS</span>
       </Link>

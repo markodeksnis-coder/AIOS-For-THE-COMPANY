@@ -4,16 +4,17 @@ type: company
 department:
 owner: Marko
 status: draft
-updated: 2026-08-09
+updated: 2026-08-13
 tags: [north-star]
 links: ["[[marketing-department]]", "[[sales-department]]"]
 ---
 
-# ASSUMPTION — please confirm: name and industry below were inferred
-# from the screenshots you shared (aios.businessandfitness.dk). Correct
-# this file if that's wrong and I'll propagate the real name everywhere.
+# NAME STILL TBD — Marko confirmed this isn't "Business & Fitness" (that
+# was a wrong guess from screenshots). Using "The Company" as an
+# explicit placeholder until the real name is set. Update this file
+# when it's decided and it'll propagate everywhere.
 
-name: "Business & Fitness"
+name: "The Company"
 industry: "Growth agency for marketing agencies (appointment setting / lead generation)"
 
 icp: >
@@ -37,10 +38,12 @@ north_star: >
   stopped being their bottleneck.
 
 values:
-  - name: "Draft value 1"
-    note: "TODO — replace with a real value and why it matters here"
-  - name: "Draft value 2"
-    note: "TODO"
+  - name: "Speed & Precision"
+    note: "Move fast without being sloppy — speed is the point, but not at the cost of doing it right."
+  - name: "100% Effort"
+    note: "Full effort, every time, no half-measures."
+  - name: "Win"
+    note: "Results-driven — the point is to win, for the client and for us."
 
 promise: >
   DRAFT — one sentence describing what a client can always expect from

@@ -8,12 +8,16 @@ import { DEPARTMENT_LABELS, DEPARTMENT_ORDER, parseYamlBody } from "@/lib/brain"
 import { DEPARTMENT_ICONS, DEPARTMENT_GRADIENTS } from "@/lib/department-style";
 
 export default async function HomePage() {
-  const [departments, people, playbooks, apps] = await Promise.all([
+  const [company, departments, people, playbooks, apps] = await Promise.all([
+    db.brainFile.findUnique({ where: { slug: "company" } }),
     db.brainFile.findMany({ where: { type: "department" } }),
     db.brainFile.findMany({ where: { type: "person" } }),
     db.brainFile.findMany({ where: { type: "playbook" } }),
     db.brainFile.findMany({ where: { type: "app" } }),
   ]);
+
+  const companyData = company ? (parseYamlBody(company) as { name?: string } | null) : null;
+  const companyName = companyData?.name ?? "The Company";
 
   const sortedDepartments = [...departments].sort(
     (a, b) =>
@@ -22,15 +26,17 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-warn/35 bg-warn-wash px-4 py-3 text-[0.83rem]">
-        <span>⚠️</span>
-        <span>
-          <strong className="text-warn">Company name unconfirmed.</strong> Everything here uses
-          &ldquo;Business &amp; Fitness,&rdquo; guessed from an old screenshot. Correct{" "}
-          <code className="font-mono">brain/company.yaml</code> and it updates everywhere,
-          including this page.
-        </span>
-      </div>
+      {company?.status === "draft" && (
+        <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-warn/35 bg-warn-wash px-4 py-3 text-[0.83rem]">
+          <span>⚠️</span>
+          <span>
+            <strong className="text-warn">Company name not set.</strong> Currently showing as
+            &ldquo;{companyName}&rdquo; — a placeholder. Set the real name in{" "}
+            <code className="font-mono">brain/company.yaml</code> and it updates everywhere,
+            including this page.
+          </span>
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="font-mono text-[0.6875rem] uppercase tracking-widest text-text-faint">
