@@ -18,49 +18,56 @@
   --warn: #c97a1e;
   --warn-wash: #fbf0e1;
   --critical: #d6483e;
+  --bg-glow: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #111217;
-    --surface: #16181d;
-    --surface-2: #1c1f25;
-    --surface-hover: #23262d;
-    --border: #2b2e36;
-    --foreground: #ecedf0;
-    --text-dim: #9ca1ab;
-    --text-faint: #686d77;
+    --background: #08090d;
+    --surface: rgba(255, 255, 255, 0.045);
+    --surface-2: rgba(255, 255, 255, 0.07);
+    --surface-hover: rgba(255, 255, 255, 0.095);
+    --border: rgba(255, 255, 255, 0.09);
+    --foreground: #f3f4f8;
+    --text-dim: #9ca3b0;
+    --text-faint: #6b7280;
     --accent: #8890ee;
     --accent-strong: #a2a9f3;
-    --accent-wash: #21243a;
-    --on-accent: #12131a;
+    --accent-wash: rgba(136, 144, 238, 0.16);
+    --on-accent: #0a0a10;
     --good: #3fc98a;
-    --good-wash: #16281f;
+    --good-wash: rgba(63, 201, 138, 0.16);
     --warn: #e0964a;
-    --warn-wash: #2c2013;
+    --warn-wash: rgba(224, 150, 74, 0.16);
     --critical: #e96a60;
+    --bg-glow: radial-gradient(ellipse 900px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 60%),
+      radial-gradient(ellipse 800px 560px at 92% 8%, rgba(45, 212, 191, 0.13), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 50% 105%, rgba(168, 85, 247, 0.08), transparent 60%);
   }
 }
 
 /* Explicit choice from Settings — wins over the OS preference either direction. */
 :root[data-theme="dark"] {
-  --background: #111217;
-  --surface: #16181d;
-  --surface-2: #1c1f25;
-  --surface-hover: #23262d;
-  --border: #2b2e36;
-  --foreground: #ecedf0;
-  --text-dim: #9ca1ab;
-  --text-faint: #686d77;
+  --background: #08090d;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-hover: rgba(255, 255, 255, 0.095);
+  --border: rgba(255, 255, 255, 0.09);
+  --foreground: #f3f4f8;
+  --text-dim: #9ca3b0;
+  --text-faint: #6b7280;
   --accent: #8890ee;
   --accent-strong: #a2a9f3;
-  --accent-wash: #21243a;
-  --on-accent: #12131a;
+  --accent-wash: rgba(136, 144, 238, 0.16);
+  --on-accent: #0a0a10;
   --good: #3fc98a;
-  --good-wash: #16281f;
+  --good-wash: rgba(63, 201, 138, 0.16);
   --warn: #e0964a;
-  --warn-wash: #2c2013;
+  --warn-wash: rgba(224, 150, 74, 0.16);
   --critical: #e96a60;
+  --bg-glow: radial-gradient(ellipse 900px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 60%),
+    radial-gradient(ellipse 800px 560px at 92% 8%, rgba(45, 212, 191, 0.13), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 50% 105%, rgba(168, 85, 247, 0.08), transparent 60%);
 }
 
 :root[data-theme="light"] {
@@ -81,6 +88,7 @@
   --warn: #c97a1e;
   --warn-wash: #fbf0e1;
   --critical: #d6483e;
+  --bg-glow: none;
 }
 
 @theme inline {
@@ -105,8 +113,22 @@
   --font-mono: var(--font-plex-mono);
 }
 
-body {
+html {
   background: var(--background);
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--bg-glow);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Soft outer glow using the current accent — for active/emphasis states. */
+.glow-accent {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 28px -6px color-mix(in srgb, var(--accent) 65%, transparent);
 }

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { Building2, Users, BookOpen, LayoutGrid, type LucideIcon } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { IconTile } from "@/components/icon-tile";
 import { DEPARTMENT_LABELS, DEPARTMENT_ORDER, parseYamlBody } from "@/lib/brain";
+import { DEPARTMENT_ICONS, DEPARTMENT_GRADIENTS } from "@/lib/department-style";
 
 export default async function HomePage() {
   const [departments, people, playbooks, apps] = await Promise.all([
@@ -41,10 +44,30 @@ export default async function HomePage() {
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile num={departments.length} label="Departments" />
-        <StatTile num={people.length} label={`People (${people.filter((p) => !p.slug.startsWith("sample-")).length} real)`} />
-        <StatTile num={playbooks.length} label="Playbooks (draft v1)" />
-        <StatTile num={apps.length} label="Apps connected" />
+        <StatTile
+          icon={Building2}
+          gradient="linear-gradient(135deg, #6366F1, #8B5CF6)"
+          num={departments.length}
+          label="Departments"
+        />
+        <StatTile
+          icon={Users}
+          gradient="linear-gradient(135deg, #3B82F6, #14B8A6)"
+          num={people.length}
+          label={`People (${people.filter((p) => !p.slug.startsWith("sample-")).length} real)`}
+        />
+        <StatTile
+          icon={BookOpen}
+          gradient="linear-gradient(135deg, #F59E0B, #F97316)"
+          num={playbooks.length}
+          label="Playbooks (draft v1)"
+        />
+        <StatTile
+          icon={LayoutGrid}
+          gradient="linear-gradient(135deg, #22C55E, #4ADE80)"
+          num={apps.length}
+          label="Apps connected"
+        />
       </div>
 
       <section className="mb-8">
@@ -55,13 +78,20 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {sortedDepartments.map((d) => {
             const data = parseYamlBody(d) as { kpis?: unknown[]; team?: unknown[] } | null;
+            const dept = d.department ?? "";
             return (
-              <Link key={d.slug} href={`/departments/${d.department}`}>
-                <Card className="h-full p-4 transition-colors hover:border-accent">
-                  <h3 className="text-[0.9rem] font-bold">
-                    {DEPARTMENT_LABELS[d.department ?? ""] ?? d.department}
-                  </h3>
-                  <div className="mt-2 flex gap-3 font-mono text-[0.68rem] text-text-faint">
+              <Link key={d.slug} href={`/departments/${dept}`}>
+                <Card className="h-full p-4 transition-all hover:border-accent hover:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset,0_16px_32px_-16px_rgba(99,102,241,0.35)]">
+                  <div className="flex items-center gap-2.5">
+                    <IconTile
+                      icon={DEPARTMENT_ICONS[dept] ?? Building2}
+                      gradient={DEPARTMENT_GRADIENTS[dept] ?? "linear-gradient(135deg, #64748B, #94A3B8)"}
+                    />
+                    <h3 className="text-[0.9rem] font-bold">
+                      {DEPARTMENT_LABELS[dept] ?? dept}
+                    </h3>
+                  </div>
+                  <div className="mt-3 flex gap-3 font-mono text-[0.68rem] text-text-faint">
                     <span>{data?.team?.length ?? 0} team</span>
                     <span>{data?.kpis?.length ?? 0} kpis</span>
                   </div>
@@ -95,9 +125,20 @@ export default async function HomePage() {
   );
 }
 
-function StatTile({ num, label }: { num: number; label: string }) {
+function StatTile({
+  icon,
+  gradient,
+  num,
+  label,
+}: {
+  icon: LucideIcon;
+  gradient: string;
+  num: number;
+  label: string;
+}) {
   return (
     <Card className="p-4">
+      <IconTile icon={icon} gradient={gradient} size="sm" className="mb-2.5" />
       <div className="font-mono text-2xl tabular-nums">{num}</div>
       <div className="mt-0.5 text-[0.78rem] text-text-dim">{label}</div>
     </Card>

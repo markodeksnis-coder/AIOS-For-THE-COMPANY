@@ -66,7 +66,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: "system",
+  theme: "dark",
   fontSize: "md",
   accent: "indigo",
   departmentOrder: null,
@@ -121,10 +121,11 @@ export const THEME_SCRIPT = `
 (function () {
   try {
     var raw = localStorage.getItem(${JSON.stringify(STORAGE_KEY)});
+    var defaults = ${JSON.stringify(DEFAULT_SETTINGS)};
     var s = raw ? JSON.parse(raw) : {};
-    var theme = s.theme || "system";
-    var fontSize = s.fontSize || "md";
-    var accent = s.accent || "indigo";
+    var theme = s.theme || defaults.theme;
+    var fontSize = s.fontSize || defaults.fontSize;
+    var accent = s.accent || defaults.accent;
     var fontPx = { sm: 14, md: 16, lg: 18 }[fontSize] || 16;
     var root = document.documentElement;
     if (theme !== "system") root.setAttribute("data-theme", theme);
