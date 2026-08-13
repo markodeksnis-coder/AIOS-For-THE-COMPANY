@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, IBM_Plex_Mono } from "next/font/google";
 import { Sidebar } from "@/components/sidebar";
+import { THEME_SCRIPT } from "@/lib/settings";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -27,6 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Applies saved theme/font/accent before first paint, so there's no flash of the default look. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className={`${manrope.variable} ${plexMono.variable} antialiased`}>
         <div className="flex min-h-screen">
           <Sidebar />
