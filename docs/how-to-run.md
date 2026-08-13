@@ -8,8 +8,10 @@ shows, you edit the files in `/brain`.
 
 ### Running it
 
-You'll need [Node.js](https://nodejs.org) installed (any recent version).
-Then, from a terminal in this folder:
+You'll need [Node.js](https://nodejs.org) installed (any recent version),
+and a `.env` file with database credentials — copy `.env.example` to
+`.env` and fill in the Turso values (ask Claude if you don't have them
+handy). Then, from a terminal in this folder:
 
 ```
 npm install       # one-time, downloads what the app needs

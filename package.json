@@ -8,10 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "sync-brain": "tsx scripts/sync-brain.ts",
-    "predev": "prisma migrate deploy && npm run sync-brain",
-    "prebuild": "prisma migrate deploy && npm run sync-brain"
+    "migrate-turso": "tsx scripts/migrate-turso.ts",
+    "predev": "npm run migrate-turso && npm run sync-brain",
+    "prebuild": "npm run migrate-turso && npm run sync-brain"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "@prisma/adapter-libsql": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
