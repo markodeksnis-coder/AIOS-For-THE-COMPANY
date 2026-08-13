@@ -1,0 +1,31 @@
+// The database is a search index and live-data store — never the source
+// of truth. Everything in BrainFile is rebuilt from /brain by
+// `npm run sync-brain` and is safe to delete and regenerate at any time.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model BrainFile {
+  id         String   @id @default(cuid())
+  path       String   @unique // relative path from /brain, e.g. "departments/marketing/department.yaml"
+  slug       String   @unique // url-safe id used for [[wikilinks]] and routing, e.g. "marketing-department"
+  title      String
+  type       String // company | department | doc | system | agent | app | course | lesson | project | person | template | meeting | decision | scorecard | playbook
+  department String?
+  owner      String?
+  status     String
+  updated    String
+  tags       String // JSON-encoded string[]
+  links      String // JSON-encoded string[] of slugs this file declares a link to
+  body       String // raw markdown/YAML body, frontmatter stripped
+  excerpt    String // first ~200 chars of body, for search results
+
+  @@index([type])
+  @@index([department])
+}

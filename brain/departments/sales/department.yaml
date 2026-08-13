@@ -1,0 +1,36 @@
+---
+title: "Sales Department"
+type: department
+department: sales
+owner: Marko
+status: draft
+updated: 2026-08-09
+tags: [department, sales]
+links: ["[[company]]", "[[marketing-department]]"]
+---
+
+mission: >
+  Turn Marketing's qualified leads into booked, showed-up appointments,
+  and close the ones that fit the ICP in [[company]].
+
+kpis:
+  - name: "Appointments booked / month"
+    target: "40–60 (per the backend offer promise)"
+    status: draft
+  - name: "Show-up rate"
+    target: "TODO"
+    status: draft
+  - name: "Close rate"
+    target: "TODO"
+    status: draft
+
+head_agent: "[[head-of-sales]]"
+team:
+  - "[[marko]]"
+  - "[[sample-outbound-setter]]"
+
+docs: []
+systems: []
+apps:
+  - "[[google-calendar]]"
+  - "[[gmail]]"

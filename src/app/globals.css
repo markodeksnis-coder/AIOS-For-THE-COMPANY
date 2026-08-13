@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f7f9;
+  --surface-hover: #f0f1f4;
+  --border: #e6e7eb;
+  --foreground: #15171c;
+  --text-dim: #6a6f78;
+  --text-faint: #9aa0aa;
+  --accent: #4a55c4;
+  --accent-strong: #383f9e;
+  --accent-wash: #eeeffa;
+  --on-accent: #ffffff;
+  --good: #1f9d6f;
+  --good-wash: #e7f6ef;
+  --warn: #c97a1e;
+  --warn-wash: #fbf0e1;
+  --critical: #d6483e;
+  --bg-glow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #08090d;
+    --surface: rgba(255, 255, 255, 0.045);
+    --surface-2: rgba(255, 255, 255, 0.07);
+    --surface-hover: rgba(255, 255, 255, 0.095);
+    --border: rgba(255, 255, 255, 0.09);
+    --foreground: #f3f4f8;
+    --text-dim: #9ca3b0;
+    --text-faint: #6b7280;
+    --accent: #8890ee;
+    --accent-strong: #a2a9f3;
+    --accent-wash: rgba(136, 144, 238, 0.16);
+    --on-accent: #0a0a10;
+    --good: #3fc98a;
+    --good-wash: rgba(63, 201, 138, 0.16);
+    --warn: #e0964a;
+    --warn-wash: rgba(224, 150, 74, 0.16);
+    --critical: #e96a60;
+    --bg-glow: radial-gradient(ellipse 900px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 60%),
+      radial-gradient(ellipse 800px 560px at 92% 8%, rgba(45, 212, 191, 0.13), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 50% 105%, rgba(168, 85, 247, 0.08), transparent 60%);
+  }
+}
+
+/* Explicit choice from Settings — wins over the OS preference either direction. */
+:root[data-theme="dark"] {
+  --background: #08090d;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-hover: rgba(255, 255, 255, 0.095);
+  --border: rgba(255, 255, 255, 0.09);
+  --foreground: #f3f4f8;
+  --text-dim: #9ca3b0;
+  --text-faint: #6b7280;
+  --accent: #8890ee;
+  --accent-strong: #a2a9f3;
+  --accent-wash: rgba(136, 144, 238, 0.16);
+  --on-accent: #0a0a10;
+  --good: #3fc98a;
+  --good-wash: rgba(63, 201, 138, 0.16);
+  --warn: #e0964a;
+  --warn-wash: rgba(224, 150, 74, 0.16);
+  --critical: #e96a60;
+  --bg-glow: radial-gradient(ellipse 900px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 60%),
+    radial-gradient(ellipse 800px 560px at 92% 8%, rgba(45, 212, 191, 0.13), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 50% 105%, rgba(168, 85, 247, 0.08), transparent 60%);
+}
+
+:root[data-theme="light"] {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f7f9;
+  --surface-hover: #f0f1f4;
+  --border: #e6e7eb;
+  --foreground: #15171c;
+  --text-dim: #6a6f78;
+  --text-faint: #9aa0aa;
+  --accent: #4a55c4;
+  --accent-strong: #383f9e;
+  --accent-wash: #eeeffa;
+  --on-accent: #ffffff;
+  --good: #1f9d6f;
+  --good-wash: #e7f6ef;
+  --warn: #c97a1e;
+  --warn-wash: #fbf0e1;
+  --critical: #d6483e;
+  --bg-glow: none;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-wash: var(--accent-wash);
+  --color-on-accent: var(--on-accent);
+  --color-good: var(--good);
+  --color-good-wash: var(--good-wash);
+  --color-warn: var(--warn);
+  --color-warn-wash: var(--warn-wash);
+  --color-critical: var(--critical);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-plex-mono);
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--bg-glow);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Soft outer glow using the current accent — for active/emphasis states. */
+.glow-accent {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 28px -6px color-mix(in srgb, var(--accent) 65%, transparent);
+}

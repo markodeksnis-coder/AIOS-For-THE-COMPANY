@@ -1,0 +1,30 @@
+---
+title: "Finance Department"
+type: department
+department: finance
+owner: Marko
+status: draft
+updated: 2026-08-09
+tags: [department, finance]
+links: ["[[company]]"]
+---
+
+mission: >
+  Keep the money side honest: invoicing, pricing, and knowing at any
+  moment whether the company is healthy.
+
+kpis:
+  - name: "MRR"
+    target: "TODO"
+    status: draft
+  - name: "Invoices paid on time"
+    target: "TODO"
+    status: draft
+
+head_agent: null
+team:
+  - "[[marko]]"
+
+docs: []
+systems: []
+apps: []

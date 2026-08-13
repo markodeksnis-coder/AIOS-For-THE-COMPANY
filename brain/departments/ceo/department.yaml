@@ -1,0 +1,31 @@
+---
+title: "CEO"
+type: department
+department: ceo
+owner: Marko
+status: draft
+updated: 2026-08-13
+tags: [department, leadership]
+links: ["[[company]]", "[[marketing-department]]", "[[sales-department]]", "[[product-department]]"]
+---
+
+mission: >
+  Set direction for [[company]], own the north star and offer, and make
+  the calls that cut across every department — currently the one seat
+  that actually exists.
+
+kpis:
+  - name: "MRR"
+    target: "TODO — mirrors finance-department"
+    status: draft
+  - name: "Appointments delivered vs. promised"
+    target: "TODO — mirrors sales/operations"
+    status: draft
+
+head_agent: "[[chief-executive-officer]]"
+team:
+  - "[[marko]]"
+
+docs: []
+systems: []
+apps: []

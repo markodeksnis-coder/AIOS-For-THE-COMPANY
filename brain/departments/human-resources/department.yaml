@@ -1,0 +1,31 @@
+---
+title: "Human Resources Department"
+type: department
+department: human-resources
+owner: Marko
+status: draft
+updated: 2026-08-09
+tags: [department, hr]
+links: ["[[company]]"]
+---
+
+mission: >
+  Own the people layer: hiring, onboarding, and making sure everyone
+  knows their role, targets, and where to find the answer to anything.
+
+kpis:
+  - name: "Time to fully onboarded"
+    target: "TODO"
+    status: draft
+  - name: "Open roles filled on time"
+    target: "TODO"
+    status: draft
+
+head_agent: null
+team:
+  - "[[marko]]"
+
+docs: []
+systems: []
+apps:
+  - "[[trello]]"
