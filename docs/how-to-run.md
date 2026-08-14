@@ -61,8 +61,13 @@ themselves. Refresh the app (see above) to see your change.
   link sees the same live data.
 - **Scorecards** (Phase 4) — real numbers against every department's
   KPIs, logged over time.
-- **Systems, Graph** are later phases — see `CHANGELOG.md` for the
-  roadmap.
+- **Systems** (Phase 5) — each department's real, repeatable processes.
+- **Graph** (Phase 5) — every `/brain` file and every `[[wikilink]]`
+  between them, as a map. Hover a dot to see its connections, click to
+  open it.
+
+Every phase in the original plan is built — nothing in the sidebar is
+greyed out anymore.
 
 ### Making a Issue or Project
 

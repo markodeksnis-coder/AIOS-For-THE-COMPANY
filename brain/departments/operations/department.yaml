@@ -29,7 +29,8 @@ team:
   - "[[sample-fulfillment-specialist]]"
 
 docs: []
-systems: []
+systems:
+  - "[[client-onboarding-process]]"
 apps:
   - "[[trello]]"
   - "[[atlassian]]"

@@ -157,3 +157,26 @@ markdown files back in Phase 3.
 **What's next:** the two remaining greyed-out sidebar items —
 Systems (Phase 2 scope, never built out) and the Graph view
 (visualizing how everything in `/brain` links together).
+
+## Phase 5 — Graph and Systems (2026-08-14)
+
+The last two greyed-out sidebar items are real now. Nothing in the
+sidebar says "PHASE N" anymore.
+
+**Graph:** every file in `/brain` and every `[[wikilink]]` between them,
+drawn as a map — bigger dots have more connections, hover to see a
+file's connections highlighted, click to open it. Colored by kind
+(People / Departments-projects-agents-apps / Docs-systems-training),
+with the Company file as the one obvious center. The three colors were
+picked and checked with a colorblind-safety tool, not eyeballed.
+
+**Systems:** a page listing each department's real, repeatable
+processes (how a lead becomes a booked appointment, how a new client
+gets onboarded) — same registry pattern as Agents. Seeded two SAMPLE
+systems (Sales' appointment-setting pipeline, Operations' client
+onboarding) so the page isn't empty; replace them with what actually
+happens.
+
+**What's next:** nothing pending — every phase in the original plan is
+built. Future work from here is real content (replacing SAMPLE/DRAFT
+entries with your real words) and whatever new work Marko wants next.
