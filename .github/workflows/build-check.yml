@@ -1,0 +1,26 @@
+name: Build check
+
+# Runs the exact same steps Vercel runs (prebuild: migrate-turso + sync-brain,
+# then next build) against the real database, on every push and PR. GitHub
+# Actions has open internet access and its logs are readable through the
+# GitHub API, unlike Vercel's build logs — so a failure here is something
+# that can be diagnosed directly from the log instead of a screenshot.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
