@@ -19,6 +19,9 @@
   --warn-wash: #fbf0e1;
   --critical: #d6483e;
   --bg-glow: none;
+  --graph-people: #2a78d6;
+  --graph-work: #eb6834;
+  --graph-knowledge: #1baf7a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +46,9 @@
     --bg-glow: radial-gradient(ellipse 900px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 60%),
       radial-gradient(ellipse 800px 560px at 92% 8%, rgba(45, 212, 191, 0.13), transparent 60%),
       radial-gradient(ellipse 700px 500px at 50% 105%, rgba(168, 85, 247, 0.08), transparent 60%);
+    --graph-people: #3987e5;
+    --graph-work: #d95926;
+    --graph-knowledge: #199e70;
   }
 }
 
@@ -68,6 +74,9 @@
   --bg-glow: radial-gradient(ellipse 900px 560px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 60%),
     radial-gradient(ellipse 800px 560px at 92% 8%, rgba(45, 212, 191, 0.13), transparent 60%),
     radial-gradient(ellipse 700px 500px at 50% 105%, rgba(168, 85, 247, 0.08), transparent 60%);
+  --graph-people: #3987e5;
+  --graph-work: #d95926;
+  --graph-knowledge: #199e70;
 }
 
 :root[data-theme="light"] {
@@ -89,6 +98,9 @@
   --warn-wash: #fbf0e1;
   --critical: #d6483e;
   --bg-glow: none;
+  --graph-people: #2a78d6;
+  --graph-work: #eb6834;
+  --graph-knowledge: #1baf7a;
 }
 
 @theme inline {
@@ -109,6 +121,9 @@
   --color-warn: var(--warn);
   --color-warn-wash: var(--warn-wash);
   --color-critical: var(--critical);
+  --color-graph-people: var(--graph-people);
+  --color-graph-work: var(--graph-work);
+  --color-graph-knowledge: var(--graph-knowledge);
   --font-sans: var(--font-manrope);
   --font-mono: var(--font-plex-mono);
 }

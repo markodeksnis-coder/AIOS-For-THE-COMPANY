@@ -15,7 +15,7 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { db } from "@/lib/db";
-import { NavLink, DisabledNavItem, Eyebrow } from "@/components/nav-primitives";
+import { NavLink, Eyebrow } from "@/components/nav-primitives";
 import { DepartmentNav } from "@/components/department-nav";
 
 export async function Sidebar() {
@@ -46,7 +46,7 @@ export async function Sidebar() {
         <div className="flex flex-col gap-0.5">
           <Eyebrow>Company</Eyebrow>
           <NavLink href="/docs" icon={FileText}>Docs</NavLink>
-          <DisabledNavItem icon={Workflow} phase="phase 2">Systems</DisabledNavItem>
+          <NavLink href="/systems" icon={Workflow}>Systems</NavLink>
           <NavLink href="/training" icon={GraduationCap}>Training</NavLink>
           <NavLink href="/teams" icon={Users}>Teams &amp; Members</NavLink>
           <NavLink href="/agents" icon={Bot}>Agents</NavLink>
@@ -60,7 +60,7 @@ export async function Sidebar() {
         <div className="flex flex-col gap-0.5">
           <Eyebrow>The Brain</Eyebrow>
           <NavLink href="/docs" icon={Search}>Search</NavLink>
-          <DisabledNavItem icon={Share2} phase="phase 5">Graph</DisabledNavItem>
+          <NavLink href="/graph" icon={Share2}>Graph</NavLink>
         </div>
       </div>
 

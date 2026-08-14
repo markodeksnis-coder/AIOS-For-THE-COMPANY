@@ -30,7 +30,8 @@ team:
   - "[[sample-outbound-setter]]"
 
 docs: []
-systems: []
+systems:
+  - "[[appointment-setting-pipeline]]"
 apps:
   - "[[google-calendar]]"
   - "[[gmail]]"

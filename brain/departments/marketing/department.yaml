@@ -27,7 +27,7 @@ team:
   - "[[sample-outbound-setter]]"
 
 docs: []           # see /brain/departments/marketing/docs
-systems: []        # see /brain/departments/marketing/systems
+systems: []
 apps:
   - "[[gmail]]"
   - "[[google-drive]]"
