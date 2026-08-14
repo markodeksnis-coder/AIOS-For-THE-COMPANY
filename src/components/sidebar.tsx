@@ -40,7 +40,7 @@ export async function Sidebar() {
           <NavLink href="/inbox" icon={Inbox}>Inbox</NavLink>
           <NavLink href="/issues" icon={ListTodo}>Issues</NavLink>
           <NavLink href="/projects" icon={FolderKanban}>Projects</NavLink>
-          <DisabledNavItem icon={BarChart3} phase="phase 4">Scorecards</DisabledNavItem>
+          <NavLink href="/scorecards" icon={BarChart3}>Scorecards</NavLink>
         </div>
 
         <div className="flex flex-col gap-0.5">

@@ -128,3 +128,32 @@ wouldn't show up until the next build.
 
 **What's next:** Phase 4 — Scorecards (real numbers plugged into the
 KPIs already defined per department).
+
+## Phase 4 — Scorecards (2026-08-14)
+
+Real numbers against the KPIs every department already had defined —
+"40–60 appointments booked / month" now has an actual place to log
+what really happened each period, instead of just sitting there as a
+target.
+
+**What's in there:**
+
+- **Scorecards** page, grouped by department, one card per KPI. Each
+  card shows the KPI's name and target (still defined in `/brain` —
+  that part didn't change), the latest logged number, a trend arrow
+  against the previous entry, and a small sparkline of recent history.
+- **Log entry** on any KPI card — a date, a number, and an optional
+  note. Entries can be deleted if you log something wrong.
+- Department pages link straight to their scorecard section.
+- Sidebar's Scorecards link is real now — nothing greyed out left in
+  the Work group.
+
+**Why targets stay in `/brain` but the numbers don't:** a KPI's name
+and target are a decision (rarely changes, belongs in the readable
+files); the actual weekly/monthly number is a fast-changing log, the
+same reasoning that put Issues and Projects in the database instead of
+markdown files back in Phase 3.
+
+**What's next:** the two remaining greyed-out sidebar items —
+Systems (Phase 2 scope, never built out) and the Graph view
+(visualizing how everything in `/brain` links together).
