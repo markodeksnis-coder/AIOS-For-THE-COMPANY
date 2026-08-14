@@ -67,8 +67,26 @@ async function main() {
     if (applied.has(folder)) continue;
     const sql = readFileSync(join(MIGRATIONS_DIR, folder, "migration.sql"), "utf-8");
     console.log(`migrate-turso: applying ${folder}`);
-    await client.executeMultiple(sql);
-    await client.execute({ sql: `INSERT INTO _migrations (name) VALUES (?)`, args: [folder] });
+    try {
+      await client.executeMultiple(sql);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // A previous run can crash after creating the tables but before the
+      // INSERT below records it as applied (e.g. a build got interrupted).
+      // The DDL already matches this migration, so treat that as done
+      // instead of failing every build from here on.
+      if (/already exists/i.test(message)) {
+        console.warn(
+          `migrate-turso: ${folder} objects already exist — an earlier run likely applied this but didn't get to record it. Marking as applied.`
+        );
+      } else {
+        throw err;
+      }
+    }
+    await client.execute({
+      sql: `INSERT OR IGNORE INTO _migrations (name) VALUES (?)`,
+      args: [folder],
+    });
     ranAny = true;
   }
 
