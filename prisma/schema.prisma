@@ -29,3 +29,52 @@ model BrainFile {
   @@index([type])
   @@index([department])
 }
+
+// Live data — real, not rebuilt from /brain. Unlike BrainFile, this is
+// never safe to delete.
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("planning") // planning | active | paused | done
+  department  String? // matches a /brain department slug, e.g. "marketing"
+  targetDate  String? // ISO date (YYYY-MM-DD), optional
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  issues      Issue[]
+
+  @@index([status])
+  @@index([department])
+}
+
+model Issue {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  status      String         @default("todo") // backlog | todo | in_progress | done | canceled
+  priority    String         @default("none") // none | low | medium | high | urgent
+  department  String? // matches a /brain department slug
+  assignee    String? // a /brain person slug, e.g. "marko" — free text, not a hard FK
+  dueDate     String? // ISO date (YYYY-MM-DD), optional
+  projectId   String?
+  project     Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  comments    IssueComment[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status])
+  @@index([department])
+  @@index([projectId])
+}
+
+model IssueComment {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author    String   @default("Marko")
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([issueId])
+}

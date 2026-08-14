@@ -80,3 +80,51 @@ upgrading.
 
 **What's next:** Phase 3 — Issues, Projects, Initiatives, and Inbox
 with real create/edit/delete, backed by the same SQLite database.
+
+## Live on the internet (2026-08-14)
+
+The app is deployed to Vercel now — you have a real link you can open
+from any device, not just your own computer.
+
+**What changed under the hood:** a plain SQLite file only lives on your
+own disk, so it can't be the database for a hosted app — Vercel's
+servers don't keep files between requests. Switched the database to
+Turso (a hosted version of the same SQLite), so the data survives and
+is shared across every visit. `/brain` is still the real source of
+truth; the database is still just a disposable, rebuildable index of
+it — that rule didn't change, only where the index lives.
+
+**What's next:** Phase 3 — Issues, Projects, and Inbox with real
+create/edit/delete, now backed by the live hosted database.
+
+## Phase 3 — Issues, Projects, Inbox (2026-08-14)
+
+Real work tracking, not sample content — create, edit, comment on, and
+delete Issues and Projects, and they show up live for everyone using
+the link (previous phases only stored `/brain` files at build time).
+
+**What's in there:**
+
+- **Issues** — title, description, status (Backlog/Todo/In
+  Progress/Done/Canceled), priority, department, assignee, due date,
+  and an optional linked project. Status and priority can be changed
+  right from the list without opening the issue. Comments on each
+  issue's detail page.
+- **Projects** — name, description, status, department, target date.
+  Board view (grouped by status) and List view, toggle between them.
+  Each project shows the issues linked to it.
+- **Inbox** — "what needs you today," pulled live from Issues:
+  overdue first, then what's assigned to you, then anything open and
+  unassigned. No separate data entry — it's just a live view of Issues.
+- Sidebar items for Inbox, Issues, and Projects are real links now
+  (previously greyed out "PHASE 3" placeholders). Scorecards stays
+  greyed out — that's Phase 4.
+
+**Why these pages are "live" and Docs/Training aren't:** Issues and
+Projects are real, changing-all-the-time work data, so those pages are
+told to always fetch fresh from the database instead of using a
+cached page from the last deploy — otherwise a newly created issue
+wouldn't show up until the next build.
+
+**What's next:** Phase 4 — Scorecards (real numbers plugged into the
+KPIs already defined per department).

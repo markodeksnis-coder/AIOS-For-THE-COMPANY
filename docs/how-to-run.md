@@ -1,5 +1,13 @@
 # How to run this — no developer experience needed
 
+## The app is live
+
+It's deployed on Vercel with a real, always-on link — open it from your
+phone, laptop, anywhere. Check your Vercel project dashboard for the
+exact URL if you don't have it saved. You do **not** need to run
+anything locally just to use the app day-to-day; the steps below are
+only for when you (or Claude) need to make changes to the code.
+
 ## The app now exists (Phase 2)
 
 There's a real web app you can run on your own computer. It reads
@@ -48,12 +56,29 @@ themselves. Refresh the app (see above) to see your change.
 - **Docs** — every file in `/brain`, searchable, with backlinks
 - **Teams & Members**, **Agents**, **Training**, and one page per
   **Department** — all read live from `/brain`
-- Everything else in the sidebar (Inbox, Issues, Projects, Scorecards,
-  Systems, Graph) is a later phase — see `CHANGELOG.md` for the roadmap
+- **Inbox, Issues, Projects** (Phase 3) — real work tracking. Create,
+  edit, comment on, and delete issues and projects; everyone using the
+  link sees the same live data.
+- **Scorecards, Systems, Graph** are later phases — see `CHANGELOG.md`
+  for the roadmap.
 
-## Deploying it somewhere everyone can reach
+### Making a Issue or Project
 
-Not set up yet. When you're ready for a real shared link (not just your
-own computer), tell Claude and it'll help you pick and set up hosting —
-that's a real decision involving cost and where your data lives, so it
-needs your input first.
+Go to **Issues** or **Projects** in the sidebar and click **+ New
+issue** / **+ New project**. Fill in what you know — most fields are
+optional except the title/name. You can change status and priority
+right from the list, or open an issue to edit everything, add
+comments, or delete it.
+
+## Deployment
+
+Live on Vercel, backed by a Turso (hosted SQLite) database — see the
+"Live on the internet" entry in `CHANGELOG.md` for why. The database is
+still just a rebuildable index of `/brain`; if it were ever wiped,
+`npm run sync-brain` rebuilds the `/brain`-backed pages from the files
+alone (Issues/Projects data itself lives only in the database, since
+there's no file source for live work data).
+
+If you ever need to redeploy or change environment variables, that's
+done from the Vercel project dashboard — ask Claude if you need a
+walkthrough.
