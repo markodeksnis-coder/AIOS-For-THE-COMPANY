@@ -37,9 +37,9 @@ export async function Sidebar() {
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
         <div className="flex flex-col gap-0.5">
           <Eyebrow>Work</Eyebrow>
-          <DisabledNavItem icon={Inbox} phase="phase 3">Inbox</DisabledNavItem>
-          <DisabledNavItem icon={ListTodo} phase="phase 3">Issues</DisabledNavItem>
-          <DisabledNavItem icon={FolderKanban} phase="phase 3">Projects</DisabledNavItem>
+          <NavLink href="/inbox" icon={Inbox}>Inbox</NavLink>
+          <NavLink href="/issues" icon={ListTodo}>Issues</NavLink>
+          <NavLink href="/projects" icon={FolderKanban}>Projects</NavLink>
           <DisabledNavItem icon={BarChart3} phase="phase 4">Scorecards</DisabledNavItem>
         </div>
 
