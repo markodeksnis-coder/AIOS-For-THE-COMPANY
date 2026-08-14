@@ -53,9 +53,19 @@ export default async function DepartmentPage({
       </div>
 
       <section className="mb-6">
-        <h2 className="mb-2 font-mono text-[0.68rem] uppercase tracking-widest text-text-faint">
-          KPIs
-        </h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-mono text-[0.68rem] uppercase tracking-widest text-text-faint">
+            KPIs
+          </h2>
+          {data.kpis && data.kpis.length > 0 && (
+            <Link
+              href={`/scorecards#${dept}`}
+              className="text-[0.78rem] text-text-dim hover:text-accent"
+            >
+              View scorecard →
+            </Link>
+          )}
+        </div>
         {data.kpis && data.kpis.length > 0 ? (
           <Card className="overflow-hidden">
             {data.kpis.map((k, i) => (

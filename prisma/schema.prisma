@@ -78,3 +78,18 @@ model IssueComment {
 
   @@index([issueId])
 }
+
+// A single logged number for one KPI in one period. The KPI itself (name,
+// target, department) is defined in /brain — this just tracks the real
+// numbers over time against that definition.
+model ScorecardEntry {
+  id         String   @id @default(cuid())
+  department String // matches a /brain department slug
+  kpiName    String // matches a kpi "name" from that department's department.yaml
+  period     String // ISO date (YYYY-MM-DD) — the day this number is logged for
+  value      Float
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([department, kpiName])
+}

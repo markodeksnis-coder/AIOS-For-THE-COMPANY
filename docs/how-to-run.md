@@ -59,8 +59,10 @@ themselves. Refresh the app (see above) to see your change.
 - **Inbox, Issues, Projects** (Phase 3) — real work tracking. Create,
   edit, comment on, and delete issues and projects; everyone using the
   link sees the same live data.
-- **Scorecards, Systems, Graph** are later phases — see `CHANGELOG.md`
-  for the roadmap.
+- **Scorecards** (Phase 4) — real numbers against every department's
+  KPIs, logged over time.
+- **Systems, Graph** are later phases — see `CHANGELOG.md` for the
+  roadmap.
 
 ### Making a Issue or Project
 
@@ -69,6 +71,19 @@ issue** / **+ New project**. Fill in what you know — most fields are
 optional except the title/name. You can change status and priority
 right from the list, or open an issue to edit everything, add
 comments, or delete it.
+
+### Logging a scorecard number
+
+Go to **Scorecards** in the sidebar (or click "View scorecard" on any
+department page). Each KPI has its own card — click **+ Log entry**,
+pick the date it's for, type the number, and save. The card updates to
+show that as the latest value, with a trend arrow against whatever you
+logged last time. To fix a mistake, delete the entry (the **×** next
+to it) and log it again — there's no separate edit step.
+
+The KPI's name and target still live in `/brain` (in each
+department's `department.yaml`) — edit those files directly if a
+target changes, the same as any other `/brain` content.
 
 ## Deployment
 
