@@ -5,11 +5,28 @@
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, extname, basename, dirname } from "node:path";
+import process from "node:process";
 import matter from "gray-matter";
 import { PrismaClient } from "@prisma/client";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
+
+// Unlike @prisma/client's own auto-loading, this only kicks in when nothing
+// has set DATABASE_URL yet (e.g. local dev) — Vercel already injects it.
+try {
+  process.loadEnvFile();
+} catch {
+  // no .env file — fine, env vars are already set some other way.
+}
 
 const BRAIN_DIR = join(process.cwd(), "brain");
-const prisma = new PrismaClient();
+// Same reasoning as src/lib/db.ts: a plain PrismaClient() validates the
+// schema's file:-only datasource url even though we never use it directly,
+// and DATABASE_URL is a libsql:// URL now — so this needs the adapter too.
+const adapter = new PrismaLibSQL({
+  url: process.env.DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+const prisma = new PrismaClient({ adapter });
 
 function walk(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
