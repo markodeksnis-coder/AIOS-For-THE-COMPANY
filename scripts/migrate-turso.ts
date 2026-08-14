@@ -3,11 +3,25 @@
 // driver-adapters runtime). This applies the same migration SQL files
 // straight through the libSQL client instead, tracking what's been
 // applied in its own tiny table so it's safe to run on every build.
+//
+// Everything here is wrapped defensively (top-level crash handlers, a
+// dynamic import instead of a static one) so that if this ever breaks
+// again, the build log shows the real error instead of just stopping.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
-import { createClient } from "@libsql/client";
+
+process.on("uncaughtException", (err) => {
+  console.error("migrate-turso: uncaught exception —", err);
+  process.exit(1);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("migrate-turso: unhandled rejection —", err);
+  process.exit(1);
+});
+
+console.log("migrate-turso: starting");
 
 // Unlike @prisma/client, plain scripts don't auto-load .env.
 try {
@@ -22,8 +36,18 @@ async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
 
+  let host = "(unparseable URL)";
+  try {
+    host = new URL(url).host;
+  } catch {
+    // leave the placeholder — still useful to know the URL didn't parse
+  }
+  console.log(`migrate-turso: connecting to ${host}`);
+
+  const { createClient } = await import("@libsql/client");
   const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 
+  console.log("migrate-turso: client created, ensuring _migrations table");
   await client.execute(
     `CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')))`
   );
@@ -31,6 +55,7 @@ async function main() {
   const applied = new Set(
     (await client.execute(`SELECT name FROM _migrations`)).rows.map((r) => String(r.name))
   );
+  console.log(`migrate-turso: ${applied.size} migration(s) already applied`);
 
   const folders = readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
     .filter((e) => e.isDirectory())
@@ -41,17 +66,22 @@ async function main() {
   for (const folder of folders) {
     if (applied.has(folder)) continue;
     const sql = readFileSync(join(MIGRATIONS_DIR, folder, "migration.sql"), "utf-8");
-    console.log(`Applying migration: ${folder}`);
+    console.log(`migrate-turso: applying ${folder}`);
     await client.executeMultiple(sql);
     await client.execute({ sql: `INSERT INTO _migrations (name) VALUES (?)`, args: [folder] });
     ranAny = true;
   }
 
-  console.log(ranAny ? "Migrations applied." : "Database already up to date.");
+  console.log(ranAny ? "migrate-turso: migrations applied." : "migrate-turso: already up to date.");
   client.close();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    console.log("migrate-turso: done");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("migrate-turso: failed —", err);
+    process.exit(1);
+  });
