@@ -10,6 +10,17 @@ function str(formData: FormData, key: string): string | null {
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 }
 
+/** "q1, client-facing,  urgent" -> ["q1", "client-facing", "urgent"] */
+function parseTags(formData: FormData): string {
+  const raw = formData.get("tags");
+  if (typeof raw !== "string") return "[]";
+  const tags = raw
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  return JSON.stringify([...new Set(tags)]);
+}
+
 export async function createProject(formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Name is required");
@@ -21,6 +32,7 @@ export async function createProject(formData: FormData) {
       status: str(formData, "status") ?? "planning",
       department: str(formData, "department"),
       targetDate: str(formData, "targetDate"),
+      tags: parseTags(formData),
     },
   });
 
@@ -41,6 +53,7 @@ export async function updateProject(id: string, formData: FormData) {
       status: str(formData, "status") ?? "planning",
       department: str(formData, "department"),
       targetDate: str(formData, "targetDate"),
+      tags: parseTags(formData),
     },
   });
 
@@ -56,6 +69,27 @@ export async function setProjectStatus(id: string, status: string) {
   await db.project.update({ where: { id }, data: { status } });
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
+  revalidatePath("/");
+}
+
+/** Persists a drag-and-drop move: one card's new status/position, and the
+ *  resulting order of every other card left in its column (source and/or
+ *  destination) so the whole column stays contiguously ordered. */
+export async function moveProject(
+  movedId: string,
+  status: string,
+  columnOrder: string[]
+) {
+  if (!PROJECT_STATUSES.includes(status as never)) {
+    throw new Error(`Invalid status: ${status}`);
+  }
+  await db.$transaction([
+    db.project.update({ where: { id: movedId }, data: { status } }),
+    ...columnOrder.map((id, index) =>
+      db.project.update({ where: { id }, data: { order: index } })
+    ),
+  ]);
+  revalidatePath("/projects");
   revalidatePath("/");
 }
 

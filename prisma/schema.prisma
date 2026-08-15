@@ -40,6 +40,8 @@ model Project {
   status      String   @default("planning") // planning | active | paused | done
   department  String? // matches a /brain department slug, e.g. "marketing"
   targetDate  String? // ISO date (YYYY-MM-DD), optional
+  tags        String   @default("[]") // JSON string[] — freeform labels, e.g. ["q1", "client-facing"]
+  order       Int      @default(0) // drag position within its status column
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   issues      Issue[]

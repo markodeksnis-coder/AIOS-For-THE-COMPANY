@@ -16,6 +16,7 @@ export function ProjectEditForm({
     status: string;
     department: string | null;
     targetDate: string | null;
+    tags: string;
   };
 }) {
   const [pending, setPending] = useState(false);
@@ -64,6 +65,14 @@ export function ProjectEditForm({
           <Label>Target date</Label>
           <TextInput name="targetDate" type="date" defaultValue={project.targetDate ?? ""} />
         </div>
+      </div>
+      <div>
+        <Label>Tags</Label>
+        <TextInput
+          name="tags"
+          placeholder="q1, client-facing, urgent (comma-separated)"
+          defaultValue={(JSON.parse(project.tags || "[]") as string[]).join(", ")}
+        />
       </div>
       <div className="flex items-center gap-2 pt-1">
         <Button type="submit" disabled={pending}>

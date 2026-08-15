@@ -63,6 +63,10 @@ export function NewProjectForm() {
             <TextInput name="targetDate" type="date" />
           </div>
         </div>
+        <div>
+          <Label>Tags</Label>
+          <TextInput name="tags" placeholder="q1, client-facing, urgent (comma-separated)" />
+        </div>
         <div className="flex gap-2 pt-1">
           <Button type="submit" disabled={pending}>
             {pending ? "Creating…" : "Create project"}
