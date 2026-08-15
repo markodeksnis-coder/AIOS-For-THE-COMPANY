@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   const projects = await db.project.findMany({
-    include: { _count: { select: { issues: true } } },
-    orderBy: { createdAt: "desc" },
+    include: { issues: { select: { status: true, priority: true } } },
+    orderBy: [{ order: "asc" }, { createdAt: "desc" }],
   });
 
   return (
