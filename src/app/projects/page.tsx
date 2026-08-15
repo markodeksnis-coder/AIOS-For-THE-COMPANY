@@ -10,7 +10,7 @@ export default async function ProjectsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div>
       <div className="mb-6">
         <div className="font-mono text-[0.6875rem] uppercase tracking-widest text-text-faint">
           Work · Projects
