@@ -34,7 +34,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   const isSample = file.title.toUpperCase().includes("SAMPLE");
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <Link href="/docs" className="mb-4 inline-block text-[0.8rem] text-text-dim hover:text-accent">
         ← All docs
       </Link>
