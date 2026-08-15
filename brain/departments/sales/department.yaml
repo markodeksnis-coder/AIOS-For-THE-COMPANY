@@ -29,7 +29,8 @@ team:
   - "[[marko]]"
   - "[[sample-outbound-setter]]"
 
-docs: []
+docs:
+  - "[[sales-fundamentals]]"
 systems:
   - "[[appointment-setting-pipeline]]"
 apps:
