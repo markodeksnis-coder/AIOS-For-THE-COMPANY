@@ -39,7 +39,7 @@ export function ProjectEditForm({
         <Label>Description</Label>
         <TextArea name="description" defaultValue={project.description ?? ""} rows={3} />
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="flex flex-col gap-3">
         <div>
           <Label>Status</Label>
           <Select name="status" defaultValue={project.status}>
