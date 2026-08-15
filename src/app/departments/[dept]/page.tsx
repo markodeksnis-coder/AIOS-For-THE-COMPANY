@@ -52,6 +52,18 @@ export default async function DepartmentPage({
         )}
       </div>
 
+      <div className="mb-6 flex items-center gap-1 border-b border-border">
+        <span className="border-b-2 border-accent px-3 py-2 text-[0.83rem] font-bold">
+          Overview
+        </span>
+        <Link
+          href={`/docs?department=${dept}`}
+          className="px-3 py-2 text-[0.83rem] font-semibold text-text-dim transition-colors hover:text-foreground"
+        >
+          Documents
+        </Link>
+      </div>
+
       <section className="mb-6">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-mono text-[0.68rem] uppercase tracking-widest text-text-faint">
