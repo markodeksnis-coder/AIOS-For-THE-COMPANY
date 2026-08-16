@@ -73,6 +73,21 @@ export async function setIssueField(id: string, field: "status" | "priority", va
   revalidatePath("/");
 }
 
+/** Persists a drag-and-drop move: one issue's new status/position, and the
+ *  resulting order of every other issue left in its column. */
+export async function moveIssue(movedId: string, status: string, columnOrder: string[]) {
+  if (!ISSUE_STATUSES.includes(status as never)) {
+    throw new Error(`Invalid status: ${status}`);
+  }
+  await db.$transaction([
+    db.issue.update({ where: { id: movedId }, data: { status } }),
+    ...columnOrder.map((id, index) => db.issue.update({ where: { id }, data: { order: index } })),
+  ]);
+  revalidatePath("/issues");
+  revalidatePath("/inbox");
+  revalidatePath("/");
+}
+
 export async function deleteIssue(id: string) {
   await db.issue.delete({ where: { id } });
   revalidatePath("/issues");

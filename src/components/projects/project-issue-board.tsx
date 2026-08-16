@@ -17,7 +17,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { setIssueField } from "@/lib/actions/issues";
-import { ISSUE_STATUSES, ISSUE_STATUS_LABELS, isOverdue, type IssueStatus } from "@/lib/work";
+import { ISSUE_STATUSES, ISSUE_STATUS_LABELS, isOverdue } from "@/lib/work";
+import { ISSUE_STATUS_STYLE as COLUMN_STYLE } from "@/lib/issue-style";
+import { PRIORITY_COLOR } from "@/lib/project-style";
 
 export type MiniIssue = {
   id: string;
@@ -26,21 +28,6 @@ export type MiniIssue = {
   priority: string;
   assignee: string | null;
   dueDate: string | null;
-};
-
-const COLUMN_STYLE: Record<IssueStatus, { bar: string; wash: string; text: string }> = {
-  backlog: { bar: "#64748B", wash: "rgba(100,116,139,0.10)", text: "#94A3B8" },
-  todo: { bar: "#3B82F6", wash: "rgba(59,130,246,0.10)", text: "#60A5FA" },
-  in_progress: { bar: "#8B5CF6", wash: "rgba(139,92,246,0.10)", text: "#A78BFA" },
-  done: { bar: "#22C55E", wash: "rgba(34,197,94,0.10)", text: "#4ADE80" },
-  canceled: { bar: "#EF4444", wash: "rgba(239,68,68,0.10)", text: "#F87171" },
-};
-
-const PRIORITY_COLOR: Record<string, string> = {
-  urgent: "#EF4444",
-  high: "#F97316",
-  medium: "#3B82F6",
-  low: "#64748B",
 };
 
 function IssueCard({ issue, dragging = false }: { issue: MiniIssue; dragging?: boolean }) {
