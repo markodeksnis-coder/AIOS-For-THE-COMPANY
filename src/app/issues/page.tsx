@@ -9,14 +9,14 @@ export default async function IssuesPage() {
   const [issues, people, projects] = await Promise.all([
     db.issue.findMany({
       include: { project: { select: { id: true, name: true } } },
-      orderBy: [{ createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
     }),
     db.brainFile.findMany({ where: { type: "person" }, select: { slug: true, title: true } }),
     db.project.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <div className="mb-6">
         <div className="font-mono text-[0.6875rem] uppercase tracking-widest text-text-faint">
           Work · Issues
