@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,7 @@ import { DEPARTMENT_LABELS, DEPARTMENT_ORDER } from "@/lib/brain";
 
 export default async function AgentsPage() {
   const agents = await db.brainFile.findMany({ where: { type: "agent" } });
+  const liveCount = agents.filter((a) => a.status === "active").length;
   const grouped = new Map<string, typeof agents>();
   for (const a of agents) {
     const key = a.department ?? "unassigned";
@@ -23,8 +25,12 @@ export default async function AgentsPage() {
         </div>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Agents registry</h1>
         <p className="mt-1 max-w-[60ch] text-[0.88rem] text-text-dim">
-          {agents.length} agent definitions exist as files. None have a real runtime yet — that&apos;s
-          Phase 6. Status below is honest: &ldquo;not running&rdquo;, not a fake &ldquo;idle&rdquo;.
+          {agents.length} agent definitions exist as files.{" "}
+          {liveCount > 0
+            ? `${liveCount} have a real runtime — click through to chat.`
+            : "None have a real runtime yet."}{" "}
+          Status below is honest: an inactive agent says &ldquo;not running&rdquo;, not a fake
+          &ldquo;idle&rdquo;.
         </p>
       </div>
 
@@ -38,18 +44,28 @@ export default async function AgentsPage() {
               </span>
             </h2>
             <Card className="overflow-hidden">
-              {grouped.get(dept)!.map((a) => (
-                <Link
-                  key={a.slug}
-                  href={`/docs/${a.slug}`}
-                  className="flex items-center gap-3 border-b border-border px-4 py-2.5 text-[0.83rem] transition-colors last:border-b-0 hover:bg-surface-hover"
-                >
-                  <span className="font-bold">{a.title}</span>
-                  <span className="flex-1 truncate text-text-faint">{a.excerpt}</span>
-                  <span className="font-mono text-[0.68rem] text-text-faint">not running</span>
-                  <Badge variant="sample">sample</Badge>
-                </Link>
-              ))}
+              {grouped.get(dept)!.map((a) => {
+                const isLive = a.status === "active";
+                return (
+                  <Link
+                    key={a.slug}
+                    href={isLive ? `/agents/${a.slug}/chat` : `/docs/${a.slug}`}
+                    className="flex items-center gap-3 border-b border-border px-4 py-2.5 text-[0.83rem] transition-colors last:border-b-0 hover:bg-surface-hover"
+                  >
+                    <span className="font-bold">{a.title}</span>
+                    <span className="flex-1 truncate text-text-faint">{a.excerpt}</span>
+                    {isLive ? (
+                      <span className="flex items-center gap-1 font-mono text-[0.68rem] font-bold text-good">
+                        <MessageCircle size={12} />
+                        open chat
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[0.68rem] text-text-faint">not running</span>
+                    )}
+                    <Badge variant={isLive ? "good" : "sample"}>{isLive ? "live" : "sample"}</Badge>
+                  </Link>
+                );
+              })}
             </Card>
           </section>
         ))}
