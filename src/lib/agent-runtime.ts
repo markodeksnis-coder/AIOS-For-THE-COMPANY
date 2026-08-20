@@ -8,12 +8,17 @@ import type { BrainFile } from "@prisma/client";
 import { db } from "@/lib/db";
 import { DEPARTMENT_LABELS, parseYamlBody } from "@/lib/brain";
 import { AGENT_TOOLS, executeAgentTool } from "@/lib/agent-tools";
+import { SALES_TOOLS, executeSalesTool } from "@/lib/sales-tools";
 import type { DeptKpi } from "@/lib/scorecards";
 
 const MODEL = "claude-opus-5";
 const MAX_TOOL_ROUNDS = 6;
 
 export type ActionTaken = { tool: string; summary: string };
+type ToolOutcome = { output: unknown; summary: string | null; isError: boolean };
+export type ToolOverride = { tools: Anthropic.Tool[]; execute: (name: string, input: Record<string, unknown>) => Promise<ToolOutcome> };
+
+const SALES_TOOL_NAMES = new Set(SALES_TOOLS.map((t) => t.name));
 
 export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> {
   const department = agent.department;
@@ -47,11 +52,17 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
         "",
         `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, and log Scorecard entries against the KPIs below. Nothing you do can touch another department's data.`,
         "",
+        department === "sales"
+          ? "You also have the Inside Sales CRM: list and inspect leads, log a call (which moves the lead's stage), move a lead's stage directly, and save a personalized no-show or no-close follow-up draft. Drafts are never sent automatically — the founder reviews and sends them. For a no-show, draft an email AND a text. For a no-close, draft a Loom script AND a text."
+          : "",
+        "",
         "Your department's KPIs:",
         kpiBlock,
         "",
         "After using a tool, always tell the user plainly what you did (or that it failed and why) — never act silently.",
-      ].join("\n")
+      ]
+        .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
+        .join("\n")
     : "You do not have any real tools available right now.";
 
   return [
@@ -73,14 +84,25 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
   ].join("\n");
 }
 
-/** Runs the full tool-use loop for one conversation and returns the final text reply plus every action taken along the way. */
+/** Runs the full tool-use loop for one conversation and returns the final text reply plus every action taken along the way.
+ *  Pass `toolOverride` to replace the agent's normal toolset entirely — used for narrow, purpose-built runs (e.g. hot-lead predictions) that shouldn't have access to everything a normal chat does. */
 export async function runAgentConversation(
   agent: BrainFile,
   systemPrompt: string,
-  conversation: Anthropic.MessageParam[]
+  conversation: Anthropic.MessageParam[],
+  toolOverride?: ToolOverride
 ): Promise<{ reply: string; actions: ActionTaken[] }> {
   const client = new Anthropic();
-  const tools = agent.department ? AGENT_TOOLS : undefined;
+  const department = agent.department;
+  const tools = toolOverride
+    ? toolOverride.tools
+    : department
+      ? [...AGENT_TOOLS, ...(department === "sales" ? SALES_TOOLS : [])]
+      : undefined;
+  const execute = toolOverride
+    ? toolOverride.execute
+    : (name: string, input: Record<string, unknown>) =>
+        SALES_TOOL_NAMES.has(name) ? executeSalesTool(name, input) : executeAgentTool(name, input, department ?? "");
   const actionsTaken: ActionTaken[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -107,11 +129,7 @@ export async function runAgentConversation(
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     for (const block of response.content) {
       if (block.type !== "tool_use") continue;
-      const { output, summary, isError } = await executeAgentTool(
-        block.name,
-        (block.input ?? {}) as Record<string, unknown>,
-        agent.department ?? ""
-      );
+      const { output, summary, isError } = await execute(block.name, (block.input ?? {}) as Record<string, unknown>);
       if (summary) actionsTaken.push({ tool: block.name, summary });
       toolResults.push({
         type: "tool_result",
