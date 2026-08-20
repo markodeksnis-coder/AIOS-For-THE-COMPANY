@@ -146,7 +146,7 @@ export async function executeAgentTool(
           where: { department },
           orderBy: { order: "asc" },
           take: 20,
-          select: { id: true, name: true, status: true },
+          select: { id: true, name: true, status: true, targetDate: true },
         });
         return { output: projects, summary: null, isError: false };
       }

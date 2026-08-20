@@ -96,3 +96,20 @@ model ScorecardEntry {
 
   @@index([department, kpiName])
 }
+
+// One autonomous, unprompted run of an agent (e.g. a daily check-in) —
+// distinct from a chat message, which a person typed. This is the audit
+// trail the Activity feed reads from.
+model AgentActivity {
+  id         String   @id @default(cuid())
+  agentSlug  String // matches a /brain agent file's slug
+  agentTitle String // denormalized so the feed survives an agent being renamed
+  department String?
+  kind       String // "daily_digest" for now — room for more kinds later
+  summary    String // the agent's own short write-up of what it found/did
+  actions    String // JSON-encoded { tool: string; summary: string }[]
+  createdAt  DateTime @default(now())
+
+  @@index([agentSlug])
+  @@index([createdAt])
+}
