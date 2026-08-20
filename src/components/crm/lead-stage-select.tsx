@@ -8,7 +8,7 @@ export function LeadStageSelect({ id, stage }: { id: string; stage: string }) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(stage);
   const [pending, setPending] = useState(false);
-  const style = LEAD_STAGE_STYLE[current as keyof typeof LEAD_STAGE_STYLE] ?? LEAD_STAGE_STYLE.booked;
+  const style = LEAD_STAGE_STYLE[current as keyof typeof LEAD_STAGE_STYLE] ?? LEAD_STAGE_STYLE.new_lead;
 
   return (
     <div className="relative">

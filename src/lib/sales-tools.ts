@@ -6,7 +6,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { LEAD_STAGES, CALL_OUTCOMES } from "@/lib/crm";
+import { LEAD_STAGES, CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
 
 export const SALES_TOOLS: Anthropic.Tool[] = [
   {
@@ -21,7 +21,7 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "get_lead",
-    description: "Get full detail on one lead: contact info, tags, notes, and its call history.",
+    description: "Get full detail on one lead: contact info, deal value, tags, notes, and its call history.",
     input_schema: {
       type: "object",
       properties: { leadId: { type: "string" } },
@@ -31,17 +31,30 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "log_sales_call",
     description:
-      "Log a sales call for a lead and update the lead's stage to match the outcome. Use this when told about a call that happened.",
+      "Log what happened on a sales call. This moves the lead's stage automatically — no-show, booked_2nd_call moves it to 'showed', pif/plan close it won, no_money/not_a_fit close it lost.",
     input_schema: {
       type: "object",
       properties: {
         leadId: { type: "string" },
         scheduledAt: { type: "string", description: "ISO date, YYYY-MM-DD." },
         outcome: { type: "string", enum: [...CALL_OUTCOMES] },
+        rep: { type: "string" },
+        recordingLink: { type: "string" },
+        planLength: { type: "string", description: "Only meaningful when outcome is 'plan', e.g. '6 months'." },
         cashCollected: { type: "number", description: "Optional amount collected on this call." },
+        lossReason: { type: "string", description: "Only meaningful when outcome is no_money/not_a_fit." },
         notes: { type: "string" },
       },
       required: ["leadId", "scheduledAt", "outcome"],
+    },
+  },
+  {
+    name: "confirm_lead",
+    description: "Mark a lead's booked call as confirmed (they replied yes / clicked confirm) — a state change, not a call outcome.",
+    input_schema: {
+      type: "object",
+      properties: { leadId: { type: "string" } },
+      required: ["leadId"],
     },
   },
   {
@@ -59,40 +72,16 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "save_lead_draft",
     description:
-      "Save a personalized outreach draft for a lead — the founder reviews and sends it themselves, this never sends anything. For a no-show lead, write an email AND a text (2 calls). For a no-close lead, write a Loom video script AND a text (2 calls).",
+      "Save a personalized outreach draft for a lead — the founder reviews and sends it themselves, this never sends anything. For a no-show lead, write an email AND a text (2 calls). For a closed-lost lead, write a Loom video script AND a text (2 calls).",
     input_schema: {
       type: "object",
       properties: {
         leadId: { type: "string" },
-        kind: { type: "string", enum: ["no_show_followup", "no_close_followup"] },
+        kind: { type: "string", enum: ["no_show_followup", "closed_lost_followup"] },
         channel: { type: "string", enum: ["email", "sms", "loom_script"] },
         content: { type: "string", description: "The actual drafted copy, ready to send/read." },
       },
       required: ["leadId", "kind", "channel", "content"],
-    },
-  },
-];
-
-/** Only used by the dedicated hot-leads prediction run — kept separate from
- *  SALES_TOOLS so a normal chat can't be talked into re-ranking deals. */
-export const PREDICTION_TOOLS: Anthropic.Tool[] = [
-  {
-    name: "list_open_leads",
-    description: "List every lead currently in 'booked' or 'no_close' stage — the open pipeline.",
-    input_schema: { type: "object", properties: {} },
-  },
-  {
-    name: "save_hot_lead_prediction",
-    description:
-      "Save one ranked pick for the top-5 hottest open deals (most likely to close). Call this once per pick, ranks 1 (hottest) through 5.",
-    input_schema: {
-      type: "object",
-      properties: {
-        leadId: { type: "string" },
-        rank: { type: "integer", minimum: 1, maximum: 5 },
-        reasoning: { type: "string", description: "One or two sentences on why this lead is hot." },
-      },
-      required: ["leadId", "rank", "reasoning"],
     },
   },
 ];
@@ -124,7 +113,16 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
           where: stage ? { stage } : undefined,
           orderBy: { order: "asc" },
           take: 50,
-          select: { id: true, name: true, stage: true, source: true, tags: true, cashCollected: true },
+          select: {
+            id: true,
+            name: true,
+            stage: true,
+            source: true,
+            tags: true,
+            dealValue: true,
+            stageProbability: true,
+            cashCollected: true,
+          },
         });
         return { output: leads, summary: null, isError: false };
       }
@@ -154,13 +152,26 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
 
         const rawCash = input.cashCollected;
         const cashCollected = typeof rawCash === "number" ? rawCash : null;
+        const lossReason = str(input, "lossReason") ?? OUTCOME_LOSS_REASON[outcome as never] ?? null;
 
         await db.$transaction(async (tx) => {
           await tx.salesCall.create({
-            data: { leadId, scheduledAt, outcome, cashCollected, notes: str(input, "notes") },
+            data: {
+              leadId,
+              scheduledAt,
+              outcome,
+              rep: str(input, "rep"),
+              recordingLink: str(input, "recordingLink"),
+              planLength: str(input, "planLength"),
+              lossReason,
+              cashCollected,
+              notes: str(input, "notes"),
+            },
           });
-          const data: { stage?: string; cashCollected?: { increment: number } } = {};
-          if (outcome !== "canceled") data.stage = outcome;
+          const stage = OUTCOME_TO_STAGE[outcome as never];
+          const data: { stage?: string; lossReason?: string | null; cashCollected?: { increment: number } } = {};
+          if (stage) data.stage = stage;
+          if (stage === "closed_lost") data.lossReason = lossReason;
           if (cashCollected) data.cashCollected = { increment: cashCollected };
           if (Object.keys(data).length) await tx.lead.update({ where: { id: leadId }, data });
         });
@@ -171,6 +182,15 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
           summary: `Logged a ${outcome} call for "${lead.name}"`,
           isError: false,
         };
+      }
+      case "confirm_lead": {
+        const leadId = str(input, "leadId");
+        if (!leadId) return { output: { error: "leadId is required" }, summary: null, isError: true };
+        const lead = await db.lead.findUnique({ where: { id: leadId } });
+        if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
+        await db.lead.update({ where: { id: leadId }, data: { stage: "confirmed" } });
+        safeRevalidate("/sales/crm", `/sales/crm/${leadId}`);
+        return { output: { leadId, stage: "confirmed" }, summary: `Confirmed "${lead.name}"'s call`, isError: false };
       }
       case "update_lead_stage": {
         const leadId = str(input, "leadId");
@@ -192,7 +212,7 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         if (
           !leadId ||
           !content ||
-          (kind !== "no_show_followup" && kind !== "no_close_followup") ||
+          (kind !== "no_show_followup" && kind !== "closed_lost_followup") ||
           (channel !== "email" && channel !== "sms" && channel !== "loom_script")
         ) {
           return {
@@ -207,36 +227,9 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         safeRevalidate(`/sales/crm/${leadId}`);
         return {
           output: { leadId, kind, channel },
-          summary: `Drafted a ${channel} ${kind === "no_show_followup" ? "no-show" : "no-close"} follow-up for "${lead.name}"`,
+          summary: `Drafted a ${channel} ${kind === "no_show_followup" ? "no-show" : "closed-lost"} follow-up for "${lead.name}"`,
           isError: false,
         };
-      }
-      case "list_open_leads": {
-        const leads = await db.lead.findMany({
-          where: { stage: { in: ["booked", "no_close"] } },
-          orderBy: { order: "asc" },
-          take: 50,
-          include: { calls: { orderBy: { scheduledAt: "desc" }, take: 3 } },
-        });
-        return { output: leads, summary: null, isError: false };
-      }
-      case "save_hot_lead_prediction": {
-        const leadId = str(input, "leadId");
-        const reasoning = str(input, "reasoning");
-        const rawRank = input.rank;
-        const rank = typeof rawRank === "number" ? rawRank : Number(rawRank);
-        if (!leadId || !reasoning || !Number.isInteger(rank) || rank < 1 || rank > 5) {
-          return {
-            output: { error: "leadId, an integer rank 1-5, and reasoning are required" },
-            summary: null,
-            isError: true,
-          };
-        }
-        const lead = await db.lead.findUnique({ where: { id: leadId } });
-        if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
-        await db.hotLeadPrediction.create({ data: { leadId, rank, reasoning } });
-        safeRevalidate("/sales/crm");
-        return { output: { leadId, rank }, summary: `Ranked "${lead.name}" #${rank}`, isError: false };
       }
       default:
         return { output: { error: `unknown tool: ${name}` }, summary: null, isError: true };

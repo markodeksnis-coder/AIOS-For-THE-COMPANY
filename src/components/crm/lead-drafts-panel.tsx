@@ -29,7 +29,7 @@ export function LeadDraftsPanel({
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function generate(kind: "no_show_followup" | "no_close_followup") {
+  async function generate(kind: "no_show_followup" | "closed_lost_followup") {
     setPending(kind);
     setError(null);
     try {
@@ -61,14 +61,18 @@ export function LeadDraftsPanel({
             {pending === "no_show_followup" ? "Drafting…" : "Draft no-show follow-up"}
           </Button>
         )}
-        {stage === "no_close" && (
-          <Button onClick={() => generate("no_close_followup")} disabled={pending !== null} className="text-[0.78rem]">
-            {pending === "no_close_followup" ? "Drafting…" : "Draft no-close follow-up"}
+        {stage === "closed_lost" && (
+          <Button
+            onClick={() => generate("closed_lost_followup")}
+            disabled={pending !== null}
+            className="text-[0.78rem]"
+          >
+            {pending === "closed_lost_followup" ? "Drafting…" : "Draft closed-lost follow-up"}
           </Button>
         )}
-        {stage !== "no_show" && stage !== "no_close" && (
+        {stage !== "no_show" && stage !== "closed_lost" && (
           <p className="text-[0.76rem] text-text-faint">
-            Follow-up drafting is available once this lead is marked No-Show or No-Close.
+            Follow-up drafting is available once this lead is marked No-Show or Closed Lost.
           </p>
         )}
       </div>

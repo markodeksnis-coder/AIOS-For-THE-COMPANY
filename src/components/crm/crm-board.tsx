@@ -24,9 +24,13 @@ export type LeadRow = {
   id: string;
   name: string;
   source: string | null;
+  repName: string | null;
   stage: string;
   tags: string;
+  dealValue: number | null;
+  stageProbability: number | null;
   cashCollected: number;
+  noShowCount: number;
 };
 
 export function CrmBoard({ leads }: { leads: LeadRow[] }) {
@@ -90,18 +94,18 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 overflow-x-auto sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {LEAD_STAGES.map((stage) => {
             const style = LEAD_STAGE_STYLE[stage];
             const inColumn = columns[stage] ?? [];
             return (
-              <div key={stage}>
+              <div key={stage} className="min-w-[200px]">
                 <div
                   className="mb-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                   style={{ backgroundColor: style.wash }}
                 >
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: style.bar }} />
-                  <h2 className="text-[0.78rem] font-bold" style={{ color: style.text }}>
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: style.bar }} />
+                  <h2 className="text-[0.72rem] font-bold leading-tight" style={{ color: style.text }}>
                     {LEAD_STAGE_LABELS[stage]}
                   </h2>
                   <span className="ml-auto font-mono text-[0.65rem] text-text-faint">{inColumn.length}</span>
@@ -129,24 +133,26 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
 function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolean }) {
   const tags = parseTags(lead.tags);
   const style = LEAD_STAGE_STYLE[lead.stage as keyof typeof LEAD_STAGE_STYLE];
+  const ev =
+    lead.dealValue && lead.stageProbability ? Math.round(lead.dealValue * (lead.stageProbability / 100)) : null;
 
   return (
     <Card
       className={
-        "group relative overflow-hidden p-3.5 transition-all " +
+        "group relative overflow-hidden p-3 transition-all " +
         (dragging ? "rotate-2 scale-105 shadow-2xl" : "hover:border-accent hover:-translate-y-0.5")
       }
     >
       <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: style?.bar }} aria-hidden />
       <div className="pl-2">
-        <h3 className="mb-2 text-[0.85rem] font-bold leading-tight">{lead.name}</h3>
+        <h3 className="mb-1.5 text-[0.82rem] font-bold leading-tight">{lead.name}</h3>
 
         {tags.length > 0 && (
-          <div className="mb-2.5 flex flex-wrap gap-1">
-            {tags.map((t) => (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {tags.slice(0, 3).map((t) => (
               <span
                 key={t}
-                className="rounded-full px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide"
+                className="rounded-full px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide"
                 style={{ backgroundColor: `${tagColor(t)}22`, color: tagColor(t) }}
               >
                 {t}
@@ -155,10 +161,14 @@ function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolea
           </div>
         )}
 
-        <div className="flex items-center gap-2 font-mono text-[0.65rem] text-text-faint">
-          {lead.source && <span className="truncate">{lead.source}</span>}
+        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[0.62rem] text-text-faint">
+          {lead.repName && <span className="truncate">{lead.repName}</span>}
+          {ev !== null && <span className="font-bold text-accent-strong">EV ${ev.toLocaleString()}</span>}
           {lead.cashCollected > 0 && (
             <span className="font-bold text-good">${lead.cashCollected.toLocaleString()}</span>
+          )}
+          {lead.noShowCount > 0 && (
+            <span className="font-bold text-critical">no-show ×{lead.noShowCount}</span>
           )}
         </div>
       </div>
