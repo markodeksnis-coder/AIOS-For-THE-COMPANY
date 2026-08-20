@@ -15,8 +15,8 @@ const SALES_AGENT_SLUG = "head-of-sales";
 const INSTRUCTIONS: Record<string, string> = {
   no_show_followup:
     "This lead didn't show for their booked call. Use get_lead to pull their full detail and call history, then write a personalized email AND a personalized text message to get them to reschedule and show up — reference specifics about them, don't write generic copy. Save each with save_lead_draft (kind: no_show_followup).",
-  no_close_followup:
-    "This lead showed up but didn't buy. Use get_lead to pull their full detail and call history, then write a personalized Loom video script (what to say on camera) AND a personalized text message to get them back on a call to close — reference specifics from the call notes, don't write generic copy. Save each with save_lead_draft (kind: no_close_followup).",
+  closed_lost_followup:
+    "This lead showed up but didn't buy. Use get_lead to pull their full detail and call history (check the loss reason), then write a personalized Loom video script (what to say on camera) AND a personalized text message to get them back on a call to close — reference specifics from the call notes, don't write generic copy. Save each with save_lead_draft (kind: closed_lost_followup).",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -35,9 +35,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const kind = (body as { kind?: unknown })?.kind;
-  if (kind !== "no_show_followup" && kind !== "no_close_followup") {
+  if (kind !== "no_show_followup" && kind !== "closed_lost_followup") {
     return NextResponse.json(
-      { error: "Body must be { kind: 'no_show_followup' | 'no_close_followup' }." },
+      { error: "Body must be { kind: 'no_show_followup' | 'closed_lost_followup' }." },
       { status: 400 }
     );
   }

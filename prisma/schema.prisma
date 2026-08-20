@@ -117,37 +117,52 @@ model AgentActivity {
 // Inside Sales CRM — always sales department; no `department` column needed
 // since this whole model group only exists for Sales.
 
+// 7-stage pipeline: new_lead -> booked_unconfirmed -> confirmed -> showed
+// -> (no_show | closed_won | closed_lost). No more stages than this —
+// deliberately, so the data stays disciplined enough to trust.
 model Lead {
-  id            String   @id @default(cuid())
-  name          String
-  email         String?
-  phone         String?
-  source        String? // e.g. "facebook ads", "referral", "organic", "cold outreach"
-  stage         String   @default("booked") // booked | no_show | no_close | closed
-  tags          String   @default("[]") // JSON string[]
-  notes         String?
-  cashCollected Float    @default(0) // running total collected across every call
-  order         Int      @default(0) // drag position within its stage column
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  calls         SalesCall[]
-  drafts        LeadDraft[]
-  predictions   HotLeadPrediction[]
+  id               String   @id @default(cuid())
+  name             String
+  email            String?
+  phone            String?
+  timezone         String?
+  source           String? // e.g. "facebook ads", "referral", "organic", "cold outreach"
+  funnel           String? // campaign/funnel name
+  productInterest  String?
+  targetPrice      Float?
+  repName          String? // free text, mirrors Issue.assignee — not a hard FK
+  stage            String   @default("new_lead")
+  tags             String   @default("[]") // JSON string[] — avatar tags, behavior tags, reactivation tags, all freeform
+  notes            String?
+  dealValue        Float? // used for the Expected Value ranking: dealValue * stageProbability
+  stageProbability Float? // 0-100
+  lossReason       String? // required in practice once stage = closed_lost; enforced in the action, not the DB
+  cashCollected    Float    @default(0) // running total collected across every call
+  order            Int      @default(0) // drag position within its stage column
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  calls            SalesCall[]
+  drafts           LeadDraft[]
 
   @@index([stage])
   @@index([source])
 }
 
-// One booked call for a lead. A lead can have several over time (e.g. a
-// no-show gets rebooked) — this is the full call history; Lead.stage is
-// just the lead's current state.
+// One logged call for a lead. A lead can have several over time (e.g. a
+// no-show gets rebooked, or a "booked 2nd call" disposition leads to
+// another row later) — this is the full call history; Lead.stage is just
+// the lead's current state, derived from the most recent disposition.
 model SalesCall {
   id            String   @id @default(cuid())
   leadId        String
   lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   scheduledAt   String // ISO date (YYYY-MM-DD) the call was/is booked for
-  outcome       String   @default("booked") // booked | no_show | no_close | closed | canceled
-  cashCollected Float? // amount collected specifically on this call, if closed
+  outcome       String   @default("no_show") // no_show | booked_2nd_call | pif | plan | no_money | not_a_fit | canceled
+  rep           String?
+  recordingLink String?
+  planLength    String? // e.g. "6 months", only meaningful when outcome is "plan"
+  lossReason    String? // only meaningful when outcome is no_money/not_a_fit
+  cashCollected Float? // amount collected specifically on this call, if pif/plan
   notes         String?
   createdAt     DateTime @default(now())
 
@@ -162,24 +177,10 @@ model LeadDraft {
   id        String   @id @default(cuid())
   leadId    String
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  kind      String // "no_show_followup" | "no_close_followup"
+  kind      String // "no_show_followup" | "closed_lost_followup"
   channel   String // "email" | "sms" | "loom_script"
   content   String
   createdAt DateTime @default(now())
 
   @@index([leadId])
-}
-
-// The agent's latest ranking of the hottest open (booked/no_close) deals.
-// Cleared and rewritten each time predictions are refreshed — only the
-// newest batch (same createdAt-ish run) is ever shown.
-model HotLeadPrediction {
-  id        String   @id @default(cuid())
-  leadId    String
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rank      Int // 1 (hottest) through 5
-  reasoning String
-  createdAt DateTime @default(now())
-
-  @@index([createdAt])
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { LEAD_STAGES, CALL_OUTCOMES } from "@/lib/crm";
+import { LEAD_STAGES, CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
 
 function str(formData: FormData, key: string): string | null {
   const v = formData.get(key);
@@ -26,20 +26,29 @@ function parseTagsInput(raw: string | null): string {
   return JSON.stringify(tags);
 }
 
+function leadFieldsFromForm(formData: FormData) {
+  return {
+    email: str(formData, "email"),
+    phone: str(formData, "phone"),
+    timezone: str(formData, "timezone"),
+    source: str(formData, "source"),
+    funnel: str(formData, "funnel"),
+    productInterest: str(formData, "productInterest"),
+    targetPrice: num(formData, "targetPrice"),
+    repName: str(formData, "repName"),
+    tags: parseTagsInput(str(formData, "tags")),
+    notes: str(formData, "notes"),
+    dealValue: num(formData, "dealValue"),
+    stageProbability: num(formData, "stageProbability"),
+  };
+}
+
 export async function createLead(formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Name is required");
 
   const lead = await db.lead.create({
-    data: {
-      name,
-      email: str(formData, "email"),
-      phone: str(formData, "phone"),
-      source: str(formData, "source"),
-      stage: str(formData, "stage") ?? "booked",
-      tags: parseTagsInput(str(formData, "tags")),
-      notes: str(formData, "notes"),
-    },
+    data: { name, stage: str(formData, "stage") ?? "new_lead", ...leadFieldsFromForm(formData) },
   });
 
   revalidatePath("/sales/crm");
@@ -50,17 +59,7 @@ export async function updateLead(id: string, formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Name is required");
 
-  await db.lead.update({
-    where: { id },
-    data: {
-      name,
-      email: str(formData, "email"),
-      phone: str(formData, "phone"),
-      source: str(formData, "source"),
-      tags: parseTagsInput(str(formData, "tags")),
-      notes: str(formData, "notes"),
-    },
-  });
+  await db.lead.update({ where: { id }, data: { name, ...leadFieldsFromForm(formData) } });
 
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${id}`);
@@ -69,6 +68,13 @@ export async function updateLead(id: string, formData: FormData) {
 export async function setLeadStage(id: string, stage: string) {
   if (!LEAD_STAGES.includes(stage as never)) throw new Error(`Invalid stage: ${stage}`);
   await db.lead.update({ where: { id }, data: { stage } });
+  revalidatePath("/sales/crm");
+  revalidatePath(`/sales/crm/${id}`);
+}
+
+/** Marks a call confirmed ahead of time — a state change, not a call outcome. */
+export async function confirmLead(id: string) {
+  await db.lead.update({ where: { id }, data: { stage: "confirmed" } });
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${id}`);
 }
@@ -89,15 +95,16 @@ export async function deleteLead(id: string) {
   redirect("/sales/crm");
 }
 
-/** Logs a call and moves the lead's stage to match the outcome — a call is
- *  the event that actually changes where a lead sits on the CRM board. */
+/** Logs a call disposition and moves the lead's stage to match it — a call
+ *  is the event that actually changes where a lead sits on the CRM board. */
 export async function logSalesCall(leadId: string, formData: FormData) {
   const scheduledAt = str(formData, "scheduledAt");
-  const outcome = str(formData, "outcome") ?? "booked";
+  const outcome = str(formData, "outcome") ?? "no_show";
   if (!scheduledAt) throw new Error("Call date is required");
   if (!CALL_OUTCOMES.includes(outcome as never)) throw new Error(`Invalid outcome: ${outcome}`);
 
   const cashCollected = num(formData, "cashCollected");
+  const lossReason = str(formData, "lossReason") ?? OUTCOME_LOSS_REASON[outcome as never] ?? null;
 
   await db.$transaction(async (tx) => {
     await tx.salesCall.create({
@@ -105,20 +112,21 @@ export async function logSalesCall(leadId: string, formData: FormData) {
         leadId,
         scheduledAt,
         outcome,
+        rep: str(formData, "rep"),
+        recordingLink: str(formData, "recordingLink"),
+        planLength: str(formData, "planLength"),
+        lossReason,
         cashCollected,
         notes: str(formData, "notes"),
       },
     });
 
-    // A call's outcome always reflects the lead's current stage — canceled
-    // is the one exception, since a canceled call doesn't tell us anything
-    // new about where the lead stands.
-    const data: { stage?: string; cashCollected?: { increment: number } } = {};
-    if (outcome !== "canceled") data.stage = outcome;
+    const stage = OUTCOME_TO_STAGE[outcome as never];
+    const data: { stage?: string; lossReason?: string | null; cashCollected?: { increment: number } } = {};
+    if (stage) data.stage = stage;
+    if (stage === "closed_lost") data.lossReason = lossReason;
     if (cashCollected) data.cashCollected = { increment: cashCollected };
-    if (Object.keys(data).length) {
-      await tx.lead.update({ where: { id: leadId }, data });
-    }
+    if (Object.keys(data).length) await tx.lead.update({ where: { id: leadId }, data });
   });
 
   revalidatePath("/sales/crm");

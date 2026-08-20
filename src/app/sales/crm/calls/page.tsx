@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
-import { CALL_OUTCOME_LABELS, LEAD_STAGE_STYLE } from "@/lib/crm";
+import { CALL_OUTCOME_LABELS, OUTCOME_TO_STAGE, LEAD_STAGE_STYLE } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,8 @@ export default async function CallsPage() {
           </div>
         )}
         {calls.map((c) => {
-          const style = LEAD_STAGE_STYLE[c.outcome as keyof typeof LEAD_STAGE_STYLE];
+          const stage = OUTCOME_TO_STAGE[c.outcome as keyof typeof OUTCOME_TO_STAGE];
+          const style = stage ? LEAD_STAGE_STYLE[stage] : undefined;
           return (
             <Link
               key={c.id}
@@ -43,12 +44,13 @@ export default async function CallsPage() {
             >
               <span className="font-mono text-[0.72rem] text-text-faint">{c.scheduledAt}</span>
               <span className="flex-1 truncate font-bold">{c.lead.name}</span>
+              {c.rep && <span className="hidden font-mono text-[0.7rem] text-text-faint sm:block">{c.rep}</span>}
               {c.cashCollected ? (
                 <span className="font-mono text-[0.72rem] font-bold text-good">
                   ${c.cashCollected.toLocaleString()}
                 </span>
               ) : null}
-              {c.notes && <span className="hidden truncate text-text-faint sm:block sm:max-w-[240px]">{c.notes}</span>}
+              {c.notes && <span className="hidden truncate text-text-faint md:block md:max-w-[220px]">{c.notes}</span>}
               <span
                 className="shrink-0 rounded-full px-2.5 py-0.5 text-[0.68rem] font-bold"
                 style={{ backgroundColor: style?.wash ?? "var(--surface-2)", color: style?.text ?? "var(--text-faint)" }}
