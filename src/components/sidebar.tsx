@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Users,
   Bot,
+  Zap,
   Search,
   Share2,
   Settings as SettingsIcon,
@@ -50,6 +51,7 @@ export async function Sidebar() {
           <NavLink href="/training" icon={GraduationCap}>Training</NavLink>
           <NavLink href="/teams" icon={Users}>Teams &amp; Members</NavLink>
           <NavLink href="/agents" icon={Bot}>Agents</NavLink>
+          <NavLink href="/activity" icon={Zap}>Activity</NavLink>
         </div>
 
         <div className="flex flex-col gap-0.5">
