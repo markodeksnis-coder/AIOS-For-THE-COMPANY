@@ -1,5 +1,28 @@
 # Notes for Claude working on this repo
 
+## Fathom's API is also blocked from this sandbox
+
+Same category as the Calendly and Vercel restrictions in this file:
+`fathom.video`, `developers.fathom.ai`, and every third-party docs mirror
+tried while building the Fathom integration (`rollout.com`,
+`mindcloud.co`, `withone.ai`) came back `EGRESS_BLOCKED` from `WebFetch`.
+The one-time Fathom webhook registration in `docs/fathom-setup.md`
+genuinely cannot be run from a Claude Code session here — same as
+Calendly, the `curl` command has to be run by Marko himself, from his own
+machine. `WebSearch` still works and its result snippets are usually
+enough to get exact field names/endpoints without needing `WebFetch` on
+the blocked domain.
+
+Marko has pasted both a Calendly PAT and, separately, a Fathom API key +
+webhook secret directly into chat despite the standing warning in this
+file and in the setup docs — don't ask him to do this, and if he does
+again, don't use the pasted value directly: point him at exactly what to
+run and where (his own terminal) and tell him plainly to rotate it
+afterward, since it's now sitting in this conversation's history. (The
+Fathom integration as built doesn't even use the API key at runtime — only
+the webhook signing secret — so there was no legitimate use for it
+regardless of it being pasted.)
+
 ## Calendly's API is also blocked from this sandbox
 
 Same category as the Vercel restriction below: `api.calendly.com` is

@@ -174,7 +174,7 @@ model SalesCall {
   leadId        String
   lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   scheduledAt   String // ISO date (YYYY-MM-DD) the call was/is booked for
-  outcome       String   @default("no_show") // no_show | booked_2nd_call | pif | plan | no_money | not_a_fit | canceled
+  outcome       String   @default("no_show") // no_show | booked_2nd_call | pif | plan | no_money | not_a_fit | canceled | completed
   rep           String?
   recordingLink String?
   planLength    String? // e.g. "6 months", only meaningful when outcome is "plan"
@@ -182,6 +182,11 @@ model SalesCall {
   cashCollected Float? // amount collected specifically on this call, if pif/plan
   notes         String?
   createdAt     DateTime @default(now())
+
+  // Set when this row was created (or updated) by the Fathom webhook — lets
+  // a retried webhook delivery update the same row instead of duplicating
+  // it. Null for every call logged by hand.
+  fathomRecordingId String? @unique
 
   @@index([leadId])
   @@index([outcome])

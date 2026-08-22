@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { LEAD_STAGES, CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
+import { LEAD_STAGES, LOGGABLE_CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
 
 function str(formData: FormData, key: string): string | null {
   const v = formData.get(key);
@@ -108,25 +108,51 @@ export async function logSalesCall(leadId: string, formData: FormData) {
   const scheduledAt = str(formData, "scheduledAt");
   const outcome = str(formData, "outcome") ?? "no_show";
   if (!scheduledAt) throw new Error("Call date is required");
-  if (!CALL_OUTCOMES.includes(outcome as never)) throw new Error(`Invalid outcome: ${outcome}`);
+  if (!LOGGABLE_CALL_OUTCOMES.includes(outcome as never)) throw new Error(`Invalid outcome: ${outcome}`);
 
   const cashCollected = num(formData, "cashCollected");
   const lossReason = str(formData, "lossReason") ?? OUTCOME_LOSS_REASON[outcome as never] ?? null;
+  const recordingLink = str(formData, "recordingLink");
+  const notes = str(formData, "notes");
 
   await db.$transaction(async (tx) => {
-    await tx.salesCall.create({
-      data: {
-        leadId,
-        scheduledAt,
-        outcome,
-        rep: str(formData, "rep"),
-        recordingLink: str(formData, "recordingLink"),
-        planLength: str(formData, "planLength"),
-        lossReason,
-        cashCollected,
-        notes: str(formData, "notes"),
-      },
+    // A Fathom recording may have already created a "completed, pending
+    // disposition" row for this lead's most recent call — finish that row
+    // instead of logging a second one for the same call.
+    const pending = await tx.salesCall.findFirst({
+      where: { leadId, outcome: "completed" },
+      orderBy: { createdAt: "desc" },
     });
+
+    if (pending) {
+      await tx.salesCall.update({
+        where: { id: pending.id },
+        data: {
+          scheduledAt,
+          outcome,
+          rep: str(formData, "rep"),
+          recordingLink: recordingLink ?? pending.recordingLink,
+          planLength: str(formData, "planLength"),
+          lossReason,
+          cashCollected,
+          notes: notes ?? pending.notes,
+        },
+      });
+    } else {
+      await tx.salesCall.create({
+        data: {
+          leadId,
+          scheduledAt,
+          outcome,
+          rep: str(formData, "rep"),
+          recordingLink,
+          planLength: str(formData, "planLength"),
+          lossReason,
+          cashCollected,
+          notes,
+        },
+      });
+    }
 
     const stage = OUTCOME_TO_STAGE[outcome as never];
     const data: { stage?: string; lossReason?: string | null; cashCollected?: { increment: number } } = {};

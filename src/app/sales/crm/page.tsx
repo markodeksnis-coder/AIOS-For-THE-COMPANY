@@ -8,7 +8,7 @@ import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
 
-const SHOWED_OUTCOMES = new Set(["booked_2nd_call", "pif", "plan", "no_money", "not_a_fit"]);
+const SHOWED_OUTCOMES = new Set(["booked_2nd_call", "pif", "plan", "no_money", "not_a_fit", "completed"]);
 const WON_OUTCOMES = new Set(["pif", "plan"]);
 const OPEN_STAGES = new Set(["new_lead", "booked_unconfirmed", "confirmed", "showed"]);
 
