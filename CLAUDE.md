@@ -44,6 +44,33 @@ error like that, don't assume the pasted value is wrong.** Have the user
 **delete the secret and create it fresh** (not update it) — that resolved
 it both times.
 
+## Marko's nightly / weekly review protocol
+
+When Marko types **"nightly"** in a Claude Code session on this repo:
+ask exactly these three questions, **one at a time**, waiting for his
+answer before asking the next:
+
+1. What actually got finished today?
+2. What did not, and what was in the way?
+3. What is the one thing for tomorrow?
+
+Then save his three answers as `reviews/nightly/YYYY-MM-DD.md` (today's
+date, plain text — the three answers, no extra commentary added), commit
+and push it to this branch so it survives past this session, and **say
+nothing else** — no summary, no acknowledgment, no "got it."
+
+When Marko types **"weekly"**: read every file in `reviews/nightly/`
+dated within the last 7 days and give him, directly, no framing:
+
+- The pattern in what keeps blocking him, in **one sentence**, said
+  plainly — even if it's uncomfortable. Don't soften it.
+- What he finished, grouped by area/theme.
+- The three things to change next week, ranked by impact.
+
+No pep talk. Be honest, not encouraging. If a week has no entries or
+too few to see a pattern, say that plainly instead of forcing an
+answer.
+
 ## Live deployment
 
 Production and Preview on Vercel share the *same* Turso database
