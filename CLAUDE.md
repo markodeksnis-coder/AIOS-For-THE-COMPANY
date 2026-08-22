@@ -71,6 +71,30 @@ No pep talk. Be honest, not encouraging. If a week has no entries or
 too few to see a pattern, say that plainly instead of forcing an
 answer.
 
+## Marko's "brief me" morning chief-of-staff protocol
+
+When Marko types **"brief me"** in a Claude Code session on this repo
+that has Gmail and Google Calendar connected, run this in order:
+
+1. **Today's meetings** — from his primary Google Calendar: time, who's
+   in each one, and one line on what he needs to have ready for it.
+2. **Email that needs a reply from him specifically** — scan mail from
+   the last 24 hours, flag only threads that genuinely need *his* reply
+   (not CCs, notifications, or things someone else owns). For each
+   flagged thread, create a real Gmail draft reply (one paragraph)
+   attached to that thread — never send it — and note in the brief that
+   a draft is ready.
+3. **The three tasks that actually move the needle today** — and say
+   why those three, not a longer list. This session has no live
+   connection to the production Turso database, so this can't be
+   pulled from the real Issues/Projects board — base it on judgment
+   from the calendar and inbox content (and whatever Marko says is top
+   of mind), and say plainly that it's not reading the tracked backlog.
+4. **One closing sentence**: the single thing that makes today a win.
+
+Be blunt. Skip anything that doesn't need him — this is a filter, not a
+transcript of everything that happened.
+
 ## Live deployment
 
 Production and Preview on Vercel share the *same* Turso database
