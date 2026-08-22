@@ -71,7 +71,38 @@ export function NewLeadForm() {
             <Label>Stage probability %</Label>
             <TextInput name="stageProbability" type="number" min="0" max="100" placeholder="0-100" />
           </div>
+          <div>
+            <Label>Next call</Label>
+            <TextInput name="nextCallAt" type="datetime-local" />
+          </div>
         </div>
+
+        <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-widest text-text-faint">
+          Qualification — usually auto-filled from Calendly
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <Label>Location</Label>
+            <TextInput name="location" placeholder="Austin, TX" />
+          </div>
+          <div>
+            <Label>Instagram / LinkedIn</Label>
+            <TextInput name="instagramOrLinkedin" placeholder="@handle" />
+          </div>
+          <div>
+            <Label>Years running agency</Label>
+            <TextInput name="yearsRunningAgency" type="number" min="0" step="0.5" />
+          </div>
+          <div>
+            <Label>Monthly revenue</Label>
+            <TextInput name="monthlyRevenue" type="number" min="0" step="0.01" />
+          </div>
+        </div>
+        <div>
+          <Label>Do they currently sell / run paid ads?</Label>
+          <TextInput name="sellsService" placeholder="Their answer…" />
+        </div>
+
         <div>
           <Label>Tags</Label>
           <TextInput name="tags" placeholder="hot, b2b, high-ticket (comma-separated)" />

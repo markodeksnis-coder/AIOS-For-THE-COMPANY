@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Mail, Phone, DollarSign, Clock } from "lucide-react";
+import { Mail, Phone, DollarSign, Clock, MapPin, AtSign, CalendarClock } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { LeadStageSelect } from "@/components/crm/lead-stage-select";
@@ -8,7 +8,14 @@ import { LeadEditForm } from "@/components/crm/lead-edit-form";
 import { LogCallForm } from "@/components/crm/log-call-form";
 import { LeadDraftsPanel } from "@/components/crm/lead-drafts-panel";
 import { ConfirmCallButton } from "@/components/crm/confirm-call-button";
-import { parseTags, tagColor, CALL_OUTCOME_LABELS, OUTCOME_TO_STAGE, LEAD_STAGE_STYLE } from "@/lib/crm";
+import {
+  parseTags,
+  tagColor,
+  formatCET,
+  CALL_OUTCOME_LABELS,
+  OUTCOME_TO_STAGE,
+  LEAD_STAGE_STYLE,
+} from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +36,21 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const noShowCount = lead.calls.filter((c) => c.outcome === "no_show").length;
   const ev = lead.dealValue && lead.stageProbability ? Math.round(lead.dealValue * (lead.stageProbability / 100)) : null;
 
+  const qualificationFields = [
+    { label: "Location", value: lead.location, icon: MapPin },
+    { label: "Instagram / LinkedIn", value: lead.instagramOrLinkedin, icon: AtSign },
+    { label: "Years running agency", value: lead.yearsRunningAgency != null ? String(lead.yearsRunningAgency) : null },
+    { label: "Monthly revenue", value: lead.monthlyRevenue != null ? `$${lead.monthlyRevenue.toLocaleString()}` : null },
+    { label: "Sells / runs paid ads?", value: lead.sellsService },
+  ].filter((f) => f.value);
+
   return (
     <div className="mx-auto max-w-6xl">
       <Link href="/sales/crm" className="mb-4 inline-block text-[0.8rem] text-text-dim hover:text-accent">
         ← CRM
       </Link>
 
+      {/* One-glance qualification card */}
       <Card className="mb-6 p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -48,6 +64,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 </span>
               )}
             </div>
+
+            {lead.nextCallAt && (
+              <div className="mt-2 flex items-center gap-1.5 text-[0.83rem] font-bold text-accent-strong">
+                <CalendarClock size={14} />
+                Next call: {formatCET(lead.nextCallAt)}
+              </div>
+            )}
+
             <div className="mt-2 flex flex-wrap items-center gap-3 text-[0.8rem] text-text-dim">
               {lead.email && (
                 <span className="flex items-center gap-1.5">
@@ -73,6 +97,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 <span className="font-mono text-[0.75rem] font-bold text-accent-strong">EV ${ev.toLocaleString()}</span>
               )}
             </div>
+
             {tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {tags.map((t) => (
@@ -86,6 +111,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 ))}
               </div>
             )}
+
             <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[0.7rem] text-text-faint">
               {lead.source && <span>source: {lead.source}</span>}
               {lead.funnel && <span>funnel: {lead.funnel}</span>}
@@ -93,11 +119,27 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               {lead.productInterest && <span>interest: {lead.productInterest}</span>}
               {lead.targetPrice && <span>target: ${lead.targetPrice.toLocaleString()}</span>}
             </p>
+
             {lead.stage === "closed_lost" && lead.lossReason && (
               <p className="mt-2 text-[0.8rem] font-semibold text-warn">Loss reason: {lead.lossReason}</p>
             )}
           </div>
         </div>
+
+        {qualificationFields.length > 0 && (
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4 sm:grid-cols-3 lg:grid-cols-5">
+            {qualificationFields.map((f) => (
+              <div key={f.label}>
+                <div className="flex items-center gap-1 text-[0.65rem] font-bold uppercase tracking-widest text-text-faint">
+                  {f.icon && <f.icon size={11} />}
+                  {f.label}
+                </div>
+                <div className="mt-0.5 text-[0.85rem] font-semibold">{f.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {lead.notes && <p className="mt-4 max-w-[70ch] text-[0.85rem] text-text-dim">{lead.notes}</p>}
       </Card>
 
@@ -176,6 +218,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               notes: lead.notes,
               dealValue: lead.dealValue,
               stageProbability: lead.stageProbability,
+              location: lead.location,
+              instagramOrLinkedin: lead.instagramOrLinkedin,
+              yearsRunningAgency: lead.yearsRunningAgency,
+              monthlyRevenue: lead.monthlyRevenue,
+              sellsService: lead.sellsService,
+              nextCallAt: lead.nextCallAt ? lead.nextCallAt.toISOString().slice(0, 16) : null,
             }}
           />
         </div>
