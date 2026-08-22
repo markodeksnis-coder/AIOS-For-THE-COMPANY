@@ -41,9 +41,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma — dev.db is a rebuildable index, never source of truth
+# prisma — dev.db is a rebuildable index, never source of truth. Prisma's
+# CLI resolves a relative "file:" URL against prisma/schema.prisma's
+# directory, but the app's own runtime client (src/lib/db.ts) resolves the
+# same URL against the process cwd — so a local dev.db can end up in
+# either place depending on whether the CLI or the running app created it.
 /prisma/dev.db
 /prisma/dev.db-journal
+/dev.db
+/dev.db-journal
 
 # python cruft from an earlier, now-removed backend
 __pycache__/

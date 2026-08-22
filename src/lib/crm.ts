@@ -45,8 +45,27 @@ export const LEAD_STAGE_STYLE: Record<LeadStage, { bar: string; wash: string; te
 // Call disposition — what actually happened on one logged call. Distinct
 // from Lead.stage: logging a disposition is what *drives* the lead's stage
 // forward (see OUTCOME_TO_STAGE below), it isn't the stage itself.
-export const CALL_OUTCOMES = ["no_show", "booked_2nd_call", "pif", "plan", "no_money", "not_a_fit", "canceled"] as const;
+// "completed" is system-only — set by the Fathom webhook the moment a
+// recording is ready, meaning "they showed up, disposition not logged yet".
+// A rep never picks it directly (see LOGGABLE_CALL_OUTCOMES); logging the
+// real disposition afterward finishes that same row instead of adding a
+// second one for the same call.
+export const CALL_OUTCOMES = [
+  "no_show",
+  "booked_2nd_call",
+  "pif",
+  "plan",
+  "no_money",
+  "not_a_fit",
+  "canceled",
+  "completed",
+] as const;
 export type CallOutcome = (typeof CALL_OUTCOMES)[number];
+
+export const LOGGABLE_CALL_OUTCOMES = CALL_OUTCOMES.filter((o) => o !== "completed") as Exclude<
+  CallOutcome,
+  "completed"
+>[];
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   no_show: "No-Show",
@@ -56,6 +75,7 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   no_money: "No Money (Lost)",
   not_a_fit: "Not a Fit (Lost)",
   canceled: "Canceled",
+  completed: "Completed (Pending Disposition)",
 };
 
 /** Logging a disposition moves the lead's stage — `null` means don't touch the stage (a cancellation tells us nothing new). */
@@ -67,6 +87,7 @@ export const OUTCOME_TO_STAGE: Record<CallOutcome, LeadStage | null> = {
   no_money: "closed_lost",
   not_a_fit: "closed_lost",
   canceled: null,
+  completed: "showed",
 };
 
 /** Auto-derived loss reason when the rep didn't type one — editable, not enforced. */

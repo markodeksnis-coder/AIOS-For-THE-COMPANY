@@ -6,7 +6,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { LEAD_STAGES, CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
+import { LEAD_STAGES, LOGGABLE_CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
 
 export const SALES_TOOLS: Anthropic.Tool[] = [
   {
@@ -37,7 +37,7 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
       properties: {
         leadId: { type: "string" },
         scheduledAt: { type: "string", description: "ISO date, YYYY-MM-DD." },
-        outcome: { type: "string", enum: [...CALL_OUTCOMES] },
+        outcome: { type: "string", enum: [...LOGGABLE_CALL_OUTCOMES] },
         rep: { type: "string" },
         recordingLink: { type: "string" },
         planLength: { type: "string", description: "Only meaningful when outcome is 'plan', e.g. '6 months'." },
@@ -140,7 +140,7 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         const leadId = str(input, "leadId");
         const scheduledAt = str(input, "scheduledAt");
         const outcome = str(input, "outcome");
-        if (!leadId || !scheduledAt || !outcome || !(CALL_OUTCOMES as readonly string[]).includes(outcome)) {
+        if (!leadId || !scheduledAt || !outcome || !(LOGGABLE_CALL_OUTCOMES as readonly string[]).includes(outcome)) {
           return {
             output: { error: "leadId, scheduledAt, and a valid outcome are required" },
             summary: null,
@@ -153,21 +153,48 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         const rawCash = input.cashCollected;
         const cashCollected = typeof rawCash === "number" ? rawCash : null;
         const lossReason = str(input, "lossReason") ?? OUTCOME_LOSS_REASON[outcome as never] ?? null;
+        const recordingLink = str(input, "recordingLink");
+        const notes = str(input, "notes");
 
         await db.$transaction(async (tx) => {
-          await tx.salesCall.create({
-            data: {
-              leadId,
-              scheduledAt,
-              outcome,
-              rep: str(input, "rep"),
-              recordingLink: str(input, "recordingLink"),
-              planLength: str(input, "planLength"),
-              lossReason,
-              cashCollected,
-              notes: str(input, "notes"),
-            },
+          // A Fathom recording may have already created a "completed,
+          // pending disposition" row for this lead's most recent call —
+          // finish that row instead of logging a second one for the same
+          // call (mirrors logSalesCall in lib/actions/leads.ts).
+          const pending = await tx.salesCall.findFirst({
+            where: { leadId, outcome: "completed" },
+            orderBy: { createdAt: "desc" },
           });
+
+          if (pending) {
+            await tx.salesCall.update({
+              where: { id: pending.id },
+              data: {
+                scheduledAt,
+                outcome,
+                rep: str(input, "rep"),
+                recordingLink: recordingLink ?? pending.recordingLink,
+                planLength: str(input, "planLength"),
+                lossReason,
+                cashCollected,
+                notes: notes ?? pending.notes,
+              },
+            });
+          } else {
+            await tx.salesCall.create({
+              data: {
+                leadId,
+                scheduledAt,
+                outcome,
+                rep: str(input, "rep"),
+                recordingLink,
+                planLength: str(input, "planLength"),
+                lossReason,
+                cashCollected,
+                notes,
+              },
+            });
+          }
           const stage = OUTCOME_TO_STAGE[outcome as never];
           const data: { stage?: string; lossReason?: string | null; cashCollected?: { increment: number } } = {};
           if (stage) data.stage = stage;

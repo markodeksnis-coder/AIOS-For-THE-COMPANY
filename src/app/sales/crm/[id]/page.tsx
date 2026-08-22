@@ -34,6 +34,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   const tags = parseTags(lead.tags);
   const noShowCount = lead.calls.filter((c) => c.outcome === "no_show").length;
+  const pendingCall = lead.calls.find((c) => c.outcome === "completed") ?? null;
   const ev = lead.dealValue && lead.stageProbability ? Math.round(lead.dealValue * (lead.stageProbability / 100)) : null;
 
   const qualificationFields = [
@@ -198,7 +199,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             )}
           </Card>
 
-          <LogCallForm leadId={lead.id} />
+          <LogCallForm
+            leadId={lead.id}
+            pendingCall={
+              pendingCall
+                ? { scheduledAt: pendingCall.scheduledAt, recordingLink: pendingCall.recordingLink, notes: pendingCall.notes }
+                : null
+            }
+          />
         </div>
 
         <div>
