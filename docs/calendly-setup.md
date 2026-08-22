@@ -12,6 +12,10 @@ setup, done by you (not Claude — it needs your own Calendly account).
 
 **Keep your PAT private — don't paste it into a chat with Claude or
 anyone else.** You'll use it directly in a terminal on your own machine.
+This isn't just caution: `api.calendly.com` is actually blocked by
+Claude Code's sandbox network policy, so a Claude session genuinely
+cannot run this registration for you even with the token in hand — the
+commands below have to be run from your own terminal.
 
 ## 1. Register the webhook subscription
 

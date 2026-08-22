@@ -1,5 +1,21 @@
 # Notes for Claude working on this repo
 
+## Calendly's API is also blocked from this sandbox
+
+Same category as the Vercel restriction below: `api.calendly.com` is
+blocked by the sandbox's outbound proxy policy (`CONNECT` gets a 403,
+confirmed via `curl -sS "$HTTPS_PROXY/__agentproxy/status"` showing
+`connect_rejected` / policy denial, `selective: false` — there's no way
+to self-allowlist it). This means the one-time Calendly webhook
+registration in `docs/calendly-setup.md` genuinely cannot be run from a
+Claude Code session here — the `curl` commands have to be run by Marko
+himself, from his own machine. Don't attempt it and don't ask him to
+paste a Calendly Personal Access Token into chat for you to use it
+directly; if he already has, use it only to point him at *exactly* what
+to run and where (his own terminal), and suggest he rotate it afterward
+since it's now sitting in this conversation's history — same as the
+existing guidance for API keys pasted into chat.
+
 ## Debugging a failed Vercel build
 
 Vercel's build logs are not reachable from Claude's sandboxed network —
