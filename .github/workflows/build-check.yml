@@ -10,6 +10,14 @@ on:
   push:
   pull_request:
 
+# push and pull_request both fire for the same commit on a PR branch, and
+# both runs mutate the same shared Turso database via sync-brain — running
+# them concurrently raced and produced duplicate-slug failures. Serialize
+# same-commit runs instead of letting them overlap.
+concurrency:
+  group: build-check-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest

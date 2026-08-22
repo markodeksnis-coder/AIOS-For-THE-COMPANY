@@ -72,13 +72,27 @@ function excerptOf(body: string): string {
   return clean.slice(0, 220);
 }
 
+type BrainFileRecord = {
+  path: string;
+  slug: string;
+  title: string;
+  type: string;
+  department: string | null;
+  owner: string | null;
+  status: string;
+  updated: string;
+  tags: string;
+  links: string;
+  body: string;
+  excerpt: string;
+};
+
 async function main() {
   const files = walk(BRAIN_DIR);
   console.log(`Found ${files.length} files in /brain`);
 
-  await prisma.brainFile.deleteMany();
-
   const bySlug = new Map<string, string>(); // slug -> path, to catch collisions
+  const records: BrainFileRecord[] = [];
 
   for (const absPath of files) {
     const relPath = relative(BRAIN_DIR, absPath).split("\\").join("/");
@@ -107,23 +121,32 @@ async function main() {
 
     const tags = Array.isArray(fm.tags) ? fm.tags.map(String) : [];
 
-    await prisma.brainFile.create({
-      data: {
-        path: relPath,
-        slug,
-        title: String(fm.title),
-        type: String(fm.type),
-        department: fm.department ? String(fm.department) : null,
-        owner: fm.owner ? String(fm.owner) : null,
-        status: fm.status ? String(fm.status) : "draft",
-        updated: fm.updated ? String(fm.updated) : "",
-        tags: JSON.stringify(tags),
-        links: JSON.stringify(allLinks),
-        body: parsed.content.trim(),
-        excerpt: excerptOf(parsed.content),
-      },
+    records.push({
+      path: relPath,
+      slug,
+      title: String(fm.title),
+      type: String(fm.type),
+      department: fm.department ? String(fm.department) : null,
+      owner: fm.owner ? String(fm.owner) : null,
+      status: fm.status ? String(fm.status) : "draft",
+      updated: fm.updated ? String(fm.updated) : "",
+      tags: JSON.stringify(tags),
+      links: JSON.stringify(allLinks),
+      body: parsed.content.trim(),
+      excerpt: excerptOf(parsed.content),
     });
   }
+
+  // The workflow that runs this triggers on both `push` and `pull_request`
+  // for the same commit, so two runs can execute at nearly the same time
+  // against the same shared Turso database. A separate deleteMany() +
+  // loop-of-creates left a window where one run's delete could land between
+  // another run's delete and its creates, producing duplicate-slug
+  // collisions (SQLITE_CONSTRAINT) instead of a clean outcome. Doing the
+  // wipe-and-repopulate as a single transaction closes that window — a
+  // concurrent second run is serialized behind it by the database instead
+  // of interleaving.
+  await prisma.$transaction([prisma.brainFile.deleteMany(), prisma.brainFile.createMany({ data: records })]);
 
   console.log(`Synced ${bySlug.size} files into the index.`);
   await prisma.$disconnect();
