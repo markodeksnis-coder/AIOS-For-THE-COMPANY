@@ -27,6 +27,7 @@ function parseTagsInput(raw: string | null): string {
 }
 
 function leadFieldsFromForm(formData: FormData) {
+  const nextCallAtRaw = str(formData, "nextCallAt");
   return {
     email: str(formData, "email"),
     phone: str(formData, "phone"),
@@ -40,6 +41,12 @@ function leadFieldsFromForm(formData: FormData) {
     notes: str(formData, "notes"),
     dealValue: num(formData, "dealValue"),
     stageProbability: num(formData, "stageProbability"),
+    location: str(formData, "location"),
+    instagramOrLinkedin: str(formData, "instagramOrLinkedin"),
+    yearsRunningAgency: num(formData, "yearsRunningAgency"),
+    monthlyRevenue: num(formData, "monthlyRevenue"),
+    sellsService: str(formData, "sellsService"),
+    nextCallAt: nextCallAtRaw ? new Date(nextCallAtRaw) : null,
   };
 }
 

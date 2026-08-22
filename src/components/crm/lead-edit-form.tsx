@@ -19,6 +19,12 @@ export type EditableLead = {
   notes: string | null;
   dealValue: number | null;
   stageProbability: number | null;
+  location: string | null;
+  instagramOrLinkedin: string | null;
+  yearsRunningAgency: number | null;
+  monthlyRevenue: number | null;
+  sellsService: string | null;
+  nextCallAt: string | null; // ISO string, already trimmed to datetime-local format by the caller
 };
 
 export function LeadEditForm({ lead }: { lead: EditableLead }) {
@@ -59,6 +65,10 @@ export function LeadEditForm({ lead }: { lead: EditableLead }) {
           <TextInput name="timezone" defaultValue={lead.timezone ?? ""} />
         </div>
         <div>
+          <Label>Next call</Label>
+          <TextInput name="nextCallAt" type="datetime-local" defaultValue={lead.nextCallAt ?? ""} />
+        </div>
+        <div>
           <Label>Source</Label>
           <TextInput name="source" defaultValue={lead.source ?? ""} />
         </div>
@@ -92,6 +102,37 @@ export function LeadEditForm({ lead }: { lead: EditableLead }) {
             defaultValue={lead.stageProbability ?? ""}
           />
         </div>
+
+        <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-widest text-text-faint">
+          Qualification
+        </p>
+        <div>
+          <Label>Location</Label>
+          <TextInput name="location" defaultValue={lead.location ?? ""} />
+        </div>
+        <div>
+          <Label>Instagram / LinkedIn</Label>
+          <TextInput name="instagramOrLinkedin" defaultValue={lead.instagramOrLinkedin ?? ""} />
+        </div>
+        <div>
+          <Label>Years running agency</Label>
+          <TextInput
+            name="yearsRunningAgency"
+            type="number"
+            min="0"
+            step="0.5"
+            defaultValue={lead.yearsRunningAgency ?? ""}
+          />
+        </div>
+        <div>
+          <Label>Monthly revenue</Label>
+          <TextInput name="monthlyRevenue" type="number" min="0" step="0.01" defaultValue={lead.monthlyRevenue ?? ""} />
+        </div>
+        <div>
+          <Label>Do they currently sell / run paid ads?</Label>
+          <TextInput name="sellsService" defaultValue={lead.sellsService ?? ""} />
+        </div>
+
         <div>
           <Label>Tags</Label>
           <TextInput name="tags" defaultValue={tags} placeholder="comma-separated" />

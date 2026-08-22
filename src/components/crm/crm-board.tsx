@@ -17,7 +17,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { NewLeadForm } from "@/components/crm/new-lead-form";
-import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, parseTags, tagColor } from "@/lib/crm";
+import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET, parseTags, tagColor } from "@/lib/crm";
 import { moveLead } from "@/lib/actions/leads";
 
 export type LeadRow = {
@@ -31,6 +31,7 @@ export type LeadRow = {
   stageProbability: number | null;
   cashCollected: number;
   noShowCount: number;
+  nextCallAt: string | null; // ISO string
 };
 
 export function CrmBoard({ leads }: { leads: LeadRow[] }) {
@@ -158,6 +159,12 @@ function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolea
                 {t}
               </span>
             ))}
+          </div>
+        )}
+
+        {lead.nextCallAt && (
+          <div className="mb-1.5 font-mono text-[0.62rem] font-bold text-accent-strong">
+            {formatCET(new Date(lead.nextCallAt))}
           </div>
         )}
 

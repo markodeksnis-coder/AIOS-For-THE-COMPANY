@@ -75,6 +75,20 @@ export const OUTCOME_LOSS_REASON: Partial<Record<CallOutcome, string>> = {
   not_a_fit: "Not a fit",
 };
 
+/** Formats a Date in Central European Time, regardless of server or viewer
+ *  timezone — every lead's next-call time reads the same way everywhere.
+ *  Uses ICU's own abbreviation so it reads CEST in summer, CET in winter. */
+export function formatCET(date: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
 export const initialsOf = (name: string) =>
   name
     .trim()

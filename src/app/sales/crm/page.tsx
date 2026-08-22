@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { IconTile } from "@/components/icon-tile";
 import { CrmBoard, type LeadRow } from "@/components/crm/crm-board";
-import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE } from "@/lib/crm";
+import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,19 @@ export default async function CrmPage() {
   const revenuePerShow = showed.length > 0 ? Math.round(cashAllTime / showed.length) : 0;
   const revenuePerBooked = attempted > 0 ? Math.round(cashAllTime / attempted) : 0;
 
+  const callsSince = (since: Date) => allCalls.filter((c) => c.createdAt >= since).length;
+  const callsToday = callsSince(startOfToday);
+  const callsWeek = callsSince(startOfWeek);
+  const callsMonth = callsSince(startOfMonth);
+  const oldestCallAt = allCalls.reduce<Date | null>(
+    (min, c) => (min === null || c.createdAt < min ? c.createdAt : min),
+    null
+  );
+  const daysTracked = oldestCallAt
+    ? Math.max(1, Math.ceil((now.getTime() - oldestCallAt.getTime()) / 86_400_000))
+    : 1;
+  const dailyAverage = Math.round((allCalls.length / daysTracked) * 10) / 10;
+
   const callsBySource = leads.flatMap((l) => l.calls.map((c) => ({ key: l.source ?? "(no source)", ...c })));
   const callsByRep = allCalls.map((c) => ({ key: c.rep ?? "(unassigned)", ...c }));
 
@@ -63,6 +76,9 @@ export default async function CrmPage() {
   const freshLeads = [...leads.filter((l) => l.stage === "new_lead")]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 8);
+  const todaysConfirmedCalls = [...leads]
+    .filter((l) => l.nextCallAt && l.nextCallAt >= startOfToday && l.nextCallAt < new Date(startOfToday.getTime() + 86_400_000))
+    .sort((a, b) => (a.nextCallAt as Date).getTime() - (b.nextCallAt as Date).getTime());
 
   const leadRows: LeadRow[] = leads.map((l) => ({
     id: l.id,
@@ -75,6 +91,7 @@ export default async function CrmPage() {
     stageProbability: l.stageProbability,
     cashCollected: l.cashCollected,
     noShowCount: l.calls.filter((c) => c.outcome === "no_show").length,
+    nextCallAt: l.nextCallAt ? l.nextCallAt.toISOString() : null,
   }));
 
   return (
@@ -109,18 +126,35 @@ export default async function CrmPage() {
         />
       </div>
 
-      <Card className="mb-6 p-4">
-        <h2 className="mb-3 text-[0.8rem] font-bold">Cash collected</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <CashCell label="Today" value={cashToday} />
-          <CashCell label="This week" value={cashWeek} />
-          <CashCell label="This month" value={cashMonth} />
-          <CashCell label="Per show" value={revenuePerShow} />
-          <CashCell label="Per booked call" value={revenuePerBooked} />
-        </div>
-      </Card>
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-4">
+          <h2 className="mb-3 text-[0.8rem] font-bold">Cash collected</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <CashCell label="Today" value={cashToday} />
+            <CashCell label="This week" value={cashWeek} />
+            <CashCell label="This month" value={cashMonth} />
+            <CashCell label="Per show" value={revenuePerShow} />
+            <CashCell label="Per booked call" value={revenuePerBooked} />
+          </div>
+        </Card>
+        <Card className="p-4">
+          <h2 className="mb-3 text-[0.8rem] font-bold">Calls</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <CountCell label="Today" value={callsToday} />
+            <CountCell label="This week" value={callsWeek} />
+            <CountCell label="This month" value={callsMonth} />
+            <CountCell label="Daily average" value={dailyAverage} />
+            <CountCell label="All-time" value={allCalls.length} />
+          </div>
+        </Card>
+      </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <QueueCard
+          title="Today's confirmed calls"
+          rows={todaysConfirmedCalls.map((l) => `${formatCET(l.nextCallAt as Date)} — ${l.name}`)}
+          empty="Nothing booked for today yet."
+        />
         <QueueCard title="Today's no-shows" rows={todaysNoShows.map((l) => l.name)} empty="None today." />
         <QueueCard title="This week's closed-lost" rows={weeksClosedLost.map((l) => l.name)} empty="None this week." />
         <QueueCard title="Reactivation list" rows={reactivationLeads.map((l) => l.name)} empty="No leads tagged for reactivation." />
@@ -196,6 +230,15 @@ function CashCell({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <div className="font-mono text-lg font-bold tabular-nums text-good">${value.toLocaleString()}</div>
+      <div className="text-[0.7rem] text-text-faint">{label}</div>
+    </div>
+  );
+}
+
+function CountCell({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="font-mono text-lg font-bold tabular-nums">{value}</div>
       <div className="text-[0.7rem] text-text-faint">{label}</div>
     </div>
   );

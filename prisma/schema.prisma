@@ -139,6 +139,22 @@ model Lead {
   lossReason       String? // required in practice once stage = closed_lost; enforced in the action, not the DB
   cashCollected    Float    @default(0) // running total collected across every call
   order            Int      @default(0) // drag position within its stage column
+
+  // Qualification — filled in by hand or, when the question wording on a
+  // Calendly booking form matches (see calendly.ts), auto-parsed from the
+  // invitee's answers.
+  location            String? // free text, e.g. "Austin, TX"
+  instagramOrLinkedin String?
+  yearsRunningAgency  Float?
+  monthlyRevenue      Float?
+  sellsService        String? // free-text answer to "do you currently sell/run paid ads" style question
+
+  // The next upcoming booked call, if any — distinct from SalesCall, which
+  // only records calls that have already happened. Set by the Calendly
+  // webhook on booking, cleared on cancellation.
+  nextCallAt        DateTime?
+  calendlyEventUri  String? // Calendly's event URI — lets a reschedule/cancel webhook find the right lead
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   calls            SalesCall[]
@@ -146,6 +162,7 @@ model Lead {
 
   @@index([stage])
   @@index([source])
+  @@index([calendlyEventUri])
 }
 
 // One logged call for a lead. A lead can have several over time (e.g. a
