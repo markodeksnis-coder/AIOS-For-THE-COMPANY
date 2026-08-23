@@ -15,12 +15,15 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function DebriefsPage() {
-  const needsDebrief = await db.salesCall.findMany({
-    where: { outcome: { in: [...DEBRIEFABLE_OUTCOMES] }, debrief: null },
-    orderBy: { scheduledAt: "desc" },
-    include: { lead: { select: { id: true, name: true } } },
-    take: 30,
-  });
+  const [needsDebrief, totalDebriefableCalls] = await Promise.all([
+    db.salesCall.findMany({
+      where: { outcome: { in: [...DEBRIEFABLE_OUTCOMES] }, debrief: null },
+      orderBy: { scheduledAt: "desc" },
+      include: { lead: { select: { id: true, name: true } } },
+      take: 30,
+    }),
+    db.salesCall.count({ where: { outcome: { in: [...DEBRIEFABLE_OUTCOMES] } } }),
+  ]);
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
   const recentDebriefs = await db.callDebrief.findMany({
@@ -112,7 +115,19 @@ export default async function DebriefsPage() {
           </h2>
         </div>
         {needsDebrief.length === 0 ? (
-          <p className="p-4 text-[0.8rem] text-text-faint">Every disposed call has a debrief. Nice.</p>
+          <p className="p-4 text-[0.8rem] text-text-faint">
+            {totalDebriefableCalls === 0 ? (
+              <>
+                No calls logged yet — go to{" "}
+                <Link href="/sales/crm" className="font-semibold text-accent-strong hover:underline">
+                  the CRM dashboard
+                </Link>{" "}
+                and use Log a call, or connect Fathom/Calendly to have them land here automatically.
+              </>
+            ) : (
+              "Every disposed call has a debrief. Nice."
+            )}
+          </p>
         ) : (
           <div className="mt-3">
             {needsDebrief.map((c) => (

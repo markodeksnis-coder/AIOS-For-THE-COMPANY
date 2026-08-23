@@ -4,7 +4,11 @@ import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { IconTile } from "@/components/icon-tile";
 import { CrmBoard, type LeadRow } from "@/components/crm/crm-board";
+import { IntegrationStatus } from "@/components/crm/integration-status";
+import { LogCallQuickSearch } from "@/components/crm/log-call-quick-search";
 import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
+
+const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-COMPANY/blob/main";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +17,11 @@ const WON_OUTCOMES = new Set(["pif", "plan"]);
 const OPEN_STAGES = new Set(["new_lead", "booked_unconfirmed", "confirmed", "showed"]);
 
 export default async function CrmPage() {
-  const leads = await db.lead.findMany({
-    orderBy: { order: "asc" },
-    include: { calls: true },
-  });
+  const [leads, fathomCallCount, calendlyLeadCount] = await Promise.all([
+    db.lead.findMany({ orderBy: { order: "asc" }, include: { calls: true } }),
+    db.salesCall.count({ where: { fathomRecordingId: { not: null } } }),
+    db.lead.count({ where: { calendlyEventUri: { not: null } } }),
+  ]);
 
   const allCalls = leads.flatMap((l) => l.calls);
   const showed = allCalls.filter((c) => SHOWED_OUTCOMES.has(c.outcome));
@@ -106,7 +111,8 @@ export default async function CrmPage() {
             One pipeline, Booked to Cash — everything built around show rate and close rate.
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 items-center gap-2">
+          <LogCallQuickSearch leads={leads.map((l) => ({ id: l.id, name: l.name }))} />
           <Link
             href="/sales/crm/debriefs"
             className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
@@ -121,6 +127,14 @@ export default async function CrmPage() {
           </Link>
         </div>
       </div>
+
+      <IntegrationStatus
+        fathomConfigured={!!process.env.FATHOM_WEBHOOK_SIGNING_KEY}
+        fathomCallCount={fathomCallCount}
+        calendlyConfigured={!!process.env.CALENDLY_WEBHOOK_SIGNING_KEY}
+        calendlyLeadCount={calendlyLeadCount}
+        setupDocsBaseUrl={SETUP_DOCS_BASE_URL}
+      />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile icon={Phone} gradient="linear-gradient(135deg, #3B82F6, #14B8A6)" value={allCalls.length} label="Total calls" />

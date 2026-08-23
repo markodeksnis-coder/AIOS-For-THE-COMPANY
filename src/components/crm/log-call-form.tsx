@@ -16,7 +16,7 @@ export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCa
   const isLost = LOST_OUTCOMES.has(outcome);
 
   return (
-    <Card className="p-4">
+    <Card id="log-call" className="scroll-mt-6 p-4">
       <h2 className="mb-3 text-[0.8rem] font-bold">Log a call</h2>
       {pendingCall && (
         <p className="mb-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2 text-[0.76rem] text-accent-strong">
