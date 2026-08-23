@@ -25,12 +25,16 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     ? await db.brainFile.findMany({
         where: { type: "doc", department },
         orderBy: { title: "asc" },
-        select: { title: true, body: true },
+        select: { slug: true, title: true, excerpt: true },
       })
     : [];
 
+  // An index, not the full text — at dozens of docs (Sales alone has 48+),
+  // dumping every full body into every system prompt stopped being cheap or
+  // relevant. search_docs/get_doc let the agent pull only what a given
+  // question actually needs.
   const referenceMaterial = referenceDocs.length
-    ? referenceDocs.map((d) => `## ${d.title}\n\n${d.body}`).join("\n\n---\n\n")
+    ? referenceDocs.map((d) => `- **${d.title}** (\`${d.slug}\`): ${d.excerpt}`).join("\n")
     : "(No reference docs are filed for this department yet.)";
 
   const coachingNotes = department
@@ -67,7 +71,7 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     ? [
         "# Tools",
         "",
-        `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, log Scorecard entries against the KPIs below, and save a coaching note whenever the founder corrects you or gives you a standing preference to apply going forward — do this proactively, don't wait to be asked. Nothing you do can touch another department's data.`,
+        `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, log Scorecard entries against the KPIs below, search and read your department's reference docs in full (search_docs, then get_doc — the reference material section below is only a titles+excerpts index, not the full text), and save a coaching note whenever the founder corrects you or gives you a standing preference to apply going forward — do this proactively, don't wait to be asked. Nothing you do can touch another department's data.`,
         "",
         department === "sales"
           ? "You also have the Inside Sales CRM: list and search leads by name, inspect a lead's full detail (including every past call's outcome, notes, recording link, exact start time, Fathom transcript when one was captured, and its post-call debrief), log a call disposition (which moves the lead's stage automatically — no_show, booked_2nd_call, pif, plan, no_money, not_a_fit, or canceled), confirm a booked call, move a lead's stage directly, and save a personalized follow-up draft. Drafts are never sent automatically — the founder reviews and sends them. For a no-show, draft an email AND a text. For a closed-lost lead, draft a Loom script AND a text. For a specific on-demand request (e.g. \"write a Loom script for Josh's call yesterday\"), find the lead and the right call first (use the transcript and debrief if present — they carry what was actually said, the objection raised, and why the deal didn't close), ground the draft in that, pick whichever Sales knowledge-doc folder actually fits the situation, and save it with kind \"on_demand_followup\". For a weekly-review request (\"what do I need to work on,\" \"what patterns should I focus on,\" \"how do I get better\"), call get_call_debriefs and actually read the raw debriefs, not just the counts — find the real pattern in the rep's own words (a repeated objection, the same CLOSER step breaking down, the same doubt moment), ground your suggestions in the Sales knowledge docs, and give a short, ranked, actionable list — not a data dump. If the pattern is clear and worth remembering going forward, save it as a coaching note too."
@@ -103,7 +107,7 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     "",
     "For an open-ended opener like \"what can you help with\" or \"get me started\" — don't reply with a menu of capabilities. Use your tools right away to pull the real current state (open issues, active projects, latest scorecard numbers), lead with what you actually found, and flag anything that looks off. Show, don't describe.",
     "",
-    'Ground answers in the reference material below — it is the company\'s actual documentation. If something is not covered in it, say so plainly rather than inventing company-specific policy; general principles are fine to draw on, but distinguish "this is documented" from "this is general practice."',
+    'Ground answers in the company\'s actual documentation, not general knowledge. The reference material index below lists every doc your department has (title + short excerpt) — when a question touches something documented, call search_docs to find the right doc(s) and get_doc to read the full text before answering, rather than answering from the excerpt or from general practice. If something genuinely is not covered in any doc, say so plainly rather than inventing company-specific policy; general principles are fine to draw on, but distinguish "this is documented" from "this is general practice."',
     "",
     "Keep responses tight — lead with the outcome or the finding, skip the preamble and the bullet-point capability lists.",
     "",
@@ -111,7 +115,7 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     "",
     coachingSection,
     "",
-    "# Reference material",
+    "# Reference material (index only — use search_docs/get_doc to read a doc in full)",
     "",
     referenceMaterial,
   ]
