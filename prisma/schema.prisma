@@ -188,9 +188,41 @@ model SalesCall {
   // it. Null for every call logged by hand.
   fathomRecordingId String? @unique
 
+  debrief CallDebrief?
+
   @@index([leadId])
   @@index([outcome])
   @@index([scheduledAt])
+}
+
+// The post-call debrief — answers to the 13-question sheet run after every
+// sales call. One per SalesCall. The outcome itself (closed/no-show/etc.)
+// already lives on SalesCall — this is the "why", not the "what".
+model CallDebrief {
+  id          String    @id @default(cuid())
+  salesCallId String    @unique
+  salesCall   SalesCall @relation(fields: [salesCallId], references: [id], onDelete: Cascade)
+
+  endReason        String? // one sentence: why did it end that way
+  notEstablished   String? // what wasn't established enough to force a close/no-close
+  scriptAdherence  Int? // 1-10, followed the script start to finish
+  weakestStep      String? // opening | discovery | diagnosis | pitch | close
+  prospectDream    String? // their dream outcome, in their exact words
+  prospectBlocker  String? // what's really holding them back, in their words
+  commitmentScore  Int? // 1-10 — how badly they said they want to fix it
+  finalObjection   String? // the exact sentence that stopped the sale
+  objectionType    String? // money | belief | trust | timing | other
+  objectionOther   String? // detail when objectionType is "other"
+  doubtMoment      String? // when their energy/doubt first showed, and what preceded it
+  replayMoment     String? // the 60 seconds they'd redo, and what they'd say instead
+  rootCause        String? // script | skill | lead — pick one
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([weakestStep])
+  @@index([rootCause])
+  @@index([createdAt])
 }
 
 // An agent-drafted follow-up for a lead — a suggestion the founder reviews

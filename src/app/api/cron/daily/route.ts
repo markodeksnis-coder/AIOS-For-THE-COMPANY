@@ -14,6 +14,40 @@ const CHECK_IN_INSTRUCTION = [
   "When you're done, write a short status note (2-5 sentences) as if leaving it for the founder to read later: what's overdue, what's on track, and what you did about it.",
 ].join(" ");
 
+const WEEKLY_DEBRIEF_REVIEW_TITLE = "Weekly sales call debrief review";
+
+/** Deterministic, not agent-judgment — every Monday this cron run creates
+ *  the review issue exactly once, regardless of what any agent decides.
+ *  Guards against the cron firing twice in a week (a redeploy, a manual
+ *  trigger) by checking whether one was already created in the last 6
+ *  days rather than trusting the day-of-week check alone. */
+async function ensureWeeklyDebriefReviewIssue() {
+  if (new Date().getUTCDay() !== 1) return; // Monday only
+
+  const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000);
+  const existing = await db.issue.findFirst({
+    where: { title: WEEKLY_DEBRIEF_REVIEW_TITLE, createdAt: { gte: sixDaysAgo } },
+  });
+  if (existing) return;
+
+  await db.issue.create({
+    data: {
+      title: WEEKLY_DEBRIEF_REVIEW_TITLE,
+      description:
+        "30-45 minutes. Open /sales/crm/debriefs and:\n\n" +
+        "1. Review this week's pattern panel — which CLOSER step keeps coming up weak, what the root-cause split looks like.\n" +
+        "2. Pick ONE skill to drill next week based on that pattern.\n" +
+        "3. Roleplay that exact moment 10-20 times until it's boring.\n" +
+        "4. Save your best call as a \"greatest hit\" to rewatch during a slump.",
+      status: "todo",
+      priority: "high",
+      department: "sales",
+      assignee: "marko",
+      dueDate: new Date().toISOString().slice(0, 10),
+    },
+  });
+}
+
 type RunResult =
   | { slug: string; ok: true; summary: string; actionCount: number }
   | { slug: string; ok: false; error: string };
@@ -55,6 +89,8 @@ export async function GET(request: NextRequest) {
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+
+  await ensureWeeklyDebriefReviewIssue();
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
