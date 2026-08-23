@@ -188,6 +188,14 @@ model SalesCall {
   // it. Null for every call logged by hand.
   fathomRecordingId String? @unique
 
+  // Fathom-only enrichment — null for every call logged by hand. transcript
+  // is the full call transcript (when Fathom's webhook is configured to
+  // include it); startedAt is the exact start time, letting the Sales Coach
+  // agent disambiguate same-day calls ("yesterday's 2pm call") since
+  // scheduledAt is date-only.
+  transcript String?
+  startedAt  DateTime?
+
   debrief CallDebrief?
 
   @@index([leadId])

@@ -7,6 +7,8 @@ import {
   summaryTextFrom,
   inviteeEmailsFrom,
   callDateFrom,
+  callStartedAtFrom,
+  transcriptTextFrom,
   type FathomWebhookPayload,
 } from "@/lib/fathom";
 
@@ -62,6 +64,8 @@ export async function POST(request: NextRequest) {
   const recordingUrl = recordingUrlFrom(body);
   const summary = summaryTextFrom(body);
   const scheduledAt = callDateFrom(body);
+  const startedAt = callStartedAtFrom(body);
+  const transcript = transcriptTextFrom(body);
 
   // Idempotent: a retried delivery for the same recording updates the same
   // row instead of duplicating it.
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
     if (existingCall) {
       await tx.salesCall.update({
         where: { id: existingCall.id },
-        data: { recordingLink: recordingUrl, notes: summary, scheduledAt },
+        data: { recordingLink: recordingUrl, notes: summary, scheduledAt, startedAt, transcript },
       });
     } else {
       await tx.salesCall.create({
@@ -84,6 +88,8 @@ export async function POST(request: NextRequest) {
           recordingLink: recordingUrl,
           notes: summary,
           fathomRecordingId: recordingId,
+          startedAt,
+          transcript,
         },
       });
     }

@@ -51,7 +51,7 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
         `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, and log Scorecard entries against the KPIs below. Nothing you do can touch another department's data.`,
         "",
         department === "sales"
-          ? "You also have the Inside Sales CRM: list and inspect leads, log a call disposition (which moves the lead's stage automatically — no_show, booked_2nd_call, pif, plan, no_money, not_a_fit, or canceled), confirm a booked call, move a lead's stage directly, and save a personalized no-show or closed-lost follow-up draft. Drafts are never sent automatically — the founder reviews and sends them. For a no-show, draft an email AND a text. For a closed-lost lead, draft a Loom script AND a text."
+          ? "You also have the Inside Sales CRM: list and search leads by name, inspect a lead's full detail (including every past call's outcome, notes, recording link, exact start time, Fathom transcript when one was captured, and its post-call debrief), log a call disposition (which moves the lead's stage automatically — no_show, booked_2nd_call, pif, plan, no_money, not_a_fit, or canceled), confirm a booked call, move a lead's stage directly, and save a personalized follow-up draft. Drafts are never sent automatically — the founder reviews and sends them. For a no-show, draft an email AND a text. For a closed-lost lead, draft a Loom script AND a text. For a specific on-demand request (e.g. \"write a Loom script for Josh's call yesterday\"), find the lead and the right call first (use the transcript and debrief if present — they carry what was actually said, the objection raised, and why the deal didn't close), ground the draft in that, pick whichever Sales knowledge-doc folder actually fits the situation, and save it with kind \"on_demand_followup\"."
           : "",
         "",
         "Your department's KPIs:",
@@ -63,8 +63,22 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
         .join("\n")
     : "You do not have any real tools available right now.";
 
+  const now = new Date();
+  const nowLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Berlin",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(now);
+
   return [
     `You are ${agent.title}, an assistant for the ${deptLabel} team.`,
+    "",
+    `The current date and time is ${nowLabel}. Resolve relative references ("yesterday", "this morning", "last week") against this, not against your training data.`,
     "",
     "You are an agent, not a help menu. Default to action: if a request could reasonably be fulfilled by calling a tool, call it immediately — don't describe what you could do, don't ask permission first, don't list your capabilities. Only ask a clarifying question when you genuinely lack information that would change what you'd do (e.g. which issue, what priority).",
     "",

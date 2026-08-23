@@ -50,6 +50,8 @@ export function verifyFathomSignature(
 
 export type FathomInvitee = { name?: string | null; email?: string | null; is_external?: boolean | null };
 
+type FathomTranscriptSegment = { speaker?: string | null; speaker_name?: string | null; text?: string | null };
+
 // Fathom's exact webhook field names couldn't be confirmed live (see
 // docs/fathom-setup.md — developers.fathom.ai is blocked from this
 // sandbox same as api.calendly.com), so every field here is read
@@ -66,6 +68,7 @@ export type FathomWebhookPayload = {
   recorded_by?: { email?: string | null } | null;
   default_summary?: { markdown_formatted?: string | null; text?: string | null } | string | null;
   summary?: string | null;
+  transcript?: string | FathomTranscriptSegment[] | null;
 };
 
 export function recordingIdFrom(payload: FathomWebhookPayload): string | null {
@@ -111,4 +114,38 @@ export function callDateFrom(payload: FathomWebhookPayload): string {
   const iso = payload.recording_start_time ?? payload.scheduled_start_time;
   const d = iso ? new Date(iso) : new Date();
   return Number.isNaN(d.getTime()) ? new Date().toISOString().slice(0, 10) : d.toISOString().slice(0, 10);
+}
+
+/** The exact start time as a Date, for SalesCall.startedAt — lets the Sales
+ *  Coach agent disambiguate same-day calls ("yesterday's 2pm call") since
+ *  callDateFrom/scheduledAt only carries the date. Null (not "now") when
+ *  Fathom didn't send a usable timestamp, so a bad row is visibly
+ *  unresolved rather than silently wrong. */
+export function callStartedAtFrom(payload: FathomWebhookPayload): Date | null {
+  const iso = payload.recording_start_time ?? payload.scheduled_start_time;
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** The full call transcript as plain, readable text — "Speaker: line"
+ *  per line when Fathom sends structured segments, or the raw string
+ *  as-is when it doesn't. Null when there's nothing usable, never throws
+ *  (transcript field shape was never confirmed live — see file header). */
+export function transcriptTextFrom(payload: FathomWebhookPayload): string | null {
+  const t = payload.transcript;
+  if (!t) return null;
+  if (typeof t === "string") return t.trim() || null;
+  if (!Array.isArray(t)) return null;
+
+  const lines = t
+    .map((segment) => {
+      const speaker = segment?.speaker_name ?? segment?.speaker ?? null;
+      const text = segment?.text?.trim();
+      if (!text) return null;
+      return speaker ? `${speaker}: ${text}` : text;
+    })
+    .filter((line): line is string => Boolean(line));
+
+  return lines.length > 0 ? lines.join("\n") : null;
 }

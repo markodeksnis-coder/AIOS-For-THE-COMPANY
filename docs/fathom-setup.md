@@ -35,7 +35,8 @@ curl -X POST https://api.fathom.ai/external/v1/webhooks \
   -d '{
     "destination_url": "https://aios-for-the-company.vercel.app/api/webhooks/fathom",
     "triggered_for": ["my_recordings"],
-    "include_summary": true
+    "include_summary": true,
+    "include_transcript": true
   }'
 ```
 
@@ -46,6 +47,14 @@ If your recordings are shared with a team rather than recorded by you
 directly, use `"triggered_for": ["my_shared_with_team_recordings"]`
 instead — check the response/dashboard to confirm which one actually
 fires for your calls.
+
+**If you already registered this webhook before `include_transcript` was
+added:** an existing webhook won't retroactively start sending transcripts
+just because this doc changed. There's no confirmed update endpoint for an
+existing webhook, so the reliable path is to delete the old one from the
+Fathom dashboard and re-run the command above to create a fresh one — it'll
+return a new `secret`, so you'll need to update
+`FATHOM_WEBHOOK_SIGNING_KEY` in Vercel again too.
 
 ## 2. Add the environment variable
 
