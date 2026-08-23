@@ -15,6 +15,7 @@ import {
   CALL_OUTCOME_LABELS,
   OUTCOME_TO_STAGE,
   LEAD_STAGE_STYLE,
+  DEBRIEFABLE_OUTCOMES,
 } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const lead = await db.lead.findUnique({
     where: { id },
     include: {
-      calls: { orderBy: { scheduledAt: "desc" } },
+      calls: { orderBy: { scheduledAt: "desc" }, include: { debrief: { select: { id: true } } } },
       drafts: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -192,6 +193,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                       >
                         {CALL_OUTCOME_LABELS[c.outcome as keyof typeof CALL_OUTCOME_LABELS] ?? c.outcome}
                       </span>
+                      {DEBRIEFABLE_OUTCOMES.includes(c.outcome as never) && (
+                        <Link
+                          href={`/sales/crm/debriefs/${c.id}`}
+                          className="shrink-0 text-[0.72rem] font-semibold text-accent-strong hover:underline"
+                        >
+                          {c.debrief ? "Edit debrief" : "Debrief →"}
+                        </Link>
+                      )}
                     </div>
                   );
                 })}

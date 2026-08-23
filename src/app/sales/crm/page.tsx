@@ -106,12 +106,20 @@ export default async function CrmPage() {
             One pipeline, Booked to Cash — everything built around show rate and close rate.
           </p>
         </div>
-        <Link
-          href="/sales/crm/calls"
-          className="shrink-0 rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
-        >
-          All calls →
-        </Link>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href="/sales/crm/debriefs"
+            className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
+          >
+            Call debriefs →
+          </Link>
+          <Link
+            href="/sales/crm/calls"
+            className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
+          >
+            All calls →
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -96,6 +96,43 @@ export const OUTCOME_LOSS_REASON: Partial<Record<CallOutcome, string>> = {
   not_a_fit: "Not a fit",
 };
 
+// Post-call debrief vocabulary — the CLOSER framework step where the call
+// felt weakest, the real category behind the final objection, and the one
+// thing to blame when a call doesn't close.
+
+export const CLOSER_STEPS = ["opening", "discovery", "diagnosis", "pitch", "close"] as const;
+export type CloserStep = (typeof CLOSER_STEPS)[number];
+export const CLOSER_STEP_LABELS: Record<CloserStep, string> = {
+  opening: "Opening",
+  discovery: "Discovery",
+  diagnosis: "Diagnosis",
+  pitch: "Pitch",
+  close: "Close",
+};
+
+export const OBJECTION_TYPES = ["money", "belief", "trust", "timing", "other"] as const;
+export type ObjectionType = (typeof OBJECTION_TYPES)[number];
+export const OBJECTION_TYPE_LABELS: Record<ObjectionType, string> = {
+  money: "Money / affordability",
+  belief: "Belief (in the vehicle or themselves)",
+  trust: "Trust (you / company)",
+  timing: "Timing / priorities",
+  other: "Something else",
+};
+
+export const ROOT_CAUSES = ["script", "skill", "lead"] as const;
+export type RootCause = (typeof ROOT_CAUSES)[number];
+export const ROOT_CAUSE_LABELS: Record<RootCause, string> = {
+  script: "Script issue — the words are wrong or missing",
+  skill: "Skill issue — tone, pace, listening, confidence",
+  lead: "Lead issue — wrong person or bad fit",
+};
+
+/** A call is worth debriefing once it has a real disposition — a call still
+ *  pending disposition (Fathom's "completed") or one that never happened
+ *  (canceled) has nothing to reflect on yet. */
+export const DEBRIEFABLE_OUTCOMES = LOGGABLE_CALL_OUTCOMES.filter((o) => o !== "canceled");
+
 /** Formats a Date in Central European Time, regardless of server or viewer
  *  timezone — every lead's next-call time reads the same way everywhere.
  *  Uses ICU's own abbreviation so it reads CEST in summer, CET in winter. */
