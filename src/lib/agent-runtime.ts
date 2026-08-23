@@ -33,6 +33,25 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     ? referenceDocs.map((d) => `## ${d.title}\n\n${d.body}`).join("\n\n---\n\n")
     : "(No reference docs are filed for this department yet.)";
 
+  const coachingNotes = department
+    ? await db.coachingNote.findMany({
+        where: { department },
+        orderBy: { createdAt: "asc" },
+        take: 100,
+        select: { content: true },
+      })
+    : [];
+
+  const coachingSection = coachingNotes.length
+    ? [
+        "# Coaching notes from the founder",
+        "",
+        "Corrections and standing preferences given to you in past conversations. These are not suggestions — apply every one of them, and where one conflicts with something above, the coaching note wins.",
+        "",
+        ...coachingNotes.map((n) => `- ${n.content}`),
+      ].join("\n")
+    : "";
+
   const deptLabel = department ? DEPARTMENT_LABELS[department] ?? department : "the company";
 
   let kpiBlock = "(No KPIs defined for this department yet.)";
@@ -48,7 +67,7 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     ? [
         "# Tools",
         "",
-        `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, and log Scorecard entries against the KPIs below. Nothing you do can touch another department's data.`,
+        `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, log Scorecard entries against the KPIs below, and save a coaching note whenever the founder corrects you or gives you a standing preference to apply going forward — do this proactively, don't wait to be asked. Nothing you do can touch another department's data.`,
         "",
         department === "sales"
           ? "You also have the Inside Sales CRM: list and search leads by name, inspect a lead's full detail (including every past call's outcome, notes, recording link, exact start time, Fathom transcript when one was captured, and its post-call debrief), log a call disposition (which moves the lead's stage automatically — no_show, booked_2nd_call, pif, plan, no_money, not_a_fit, or canceled), confirm a booked call, move a lead's stage directly, and save a personalized follow-up draft. Drafts are never sent automatically — the founder reviews and sends them. For a no-show, draft an email AND a text. For a closed-lost lead, draft a Loom script AND a text. For a specific on-demand request (e.g. \"write a Loom script for Josh's call yesterday\"), find the lead and the right call first (use the transcript and debrief if present — they carry what was actually said, the objection raised, and why the deal didn't close), ground the draft in that, pick whichever Sales knowledge-doc folder actually fits the situation, and save it with kind \"on_demand_followup\"."
@@ -90,10 +109,14 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     "",
     toolsSection,
     "",
+    coachingSection,
+    "",
     "# Reference material",
     "",
     referenceMaterial,
-  ].join("\n");
+  ]
+    .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
+    .join("\n");
 }
 
 /** Runs the full tool-use loop for one conversation and returns the final text reply plus every action taken along the way. */
