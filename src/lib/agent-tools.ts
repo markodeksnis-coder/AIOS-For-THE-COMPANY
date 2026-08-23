@@ -103,6 +103,25 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "search_docs",
+    description:
+      "Search your department's reference docs by keyword — matches title, excerpt, and full body text. The reference material index below only has titles and short excerpts; use this to find which doc(s) actually cover what you need, then call get_doc to read one in full before grounding an answer in it.",
+    input_schema: {
+      type: "object",
+      properties: { query: { type: "string", description: "Keyword or phrase to search for." } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_doc",
+    description: "Get the full body text of one reference doc by its slug (from search_docs or the reference material index).",
+    input_schema: {
+      type: "object",
+      properties: { slug: { type: "string" } },
+      required: ["slug"],
+    },
+  },
+  {
     name: "save_coaching_note",
     description:
       "Save a correction or standing preference so you keep applying it in every future conversation, not just this one. Use this whenever the founder corrects you, tells you to do something differently going forward, or gives you an explicit rule to remember — e.g. \"always mention the free trial extension in no-show follow-ups\" or \"don't suggest a payment plan for leads under $2k deal value.\" Write it as a durable instruction to your future self, not a summary of the conversation.",
@@ -286,6 +305,34 @@ export async function executeAgentTool(
           summary: `Logged ${kpiName} = ${value} for ${period}`,
           isError: false,
         };
+      }
+      case "search_docs": {
+        const query = str(input, "query");
+        if (!query) return { output: { error: "query is required" }, summary: null, isError: true };
+        const docs = await db.brainFile.findMany({
+          where: {
+            type: "doc",
+            department,
+            OR: [
+              { title: { contains: query } },
+              { excerpt: { contains: query } },
+              { body: { contains: query } },
+            ],
+          },
+          orderBy: { title: "asc" },
+          take: 15,
+          select: { slug: true, title: true, excerpt: true },
+        });
+        return { output: docs, summary: null, isError: false };
+      }
+      case "get_doc": {
+        const slug = str(input, "slug");
+        if (!slug) return { output: { error: "slug is required" }, summary: null, isError: true };
+        const doc = await db.brainFile.findUnique({ where: { slug } });
+        if (!doc || doc.type !== "doc" || doc.department !== department) {
+          return { output: { error: "doc not found in your department" }, summary: null, isError: true };
+        }
+        return { output: { title: doc.title, body: doc.body }, summary: null, isError: false };
       }
       case "save_coaching_note": {
         const note = str(input, "note");
