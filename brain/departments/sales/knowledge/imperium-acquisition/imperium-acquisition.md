@@ -27,7 +27,7 @@ lesson content is filled in one module at a time as it's provided.
 8. [[08-closing-and-decision-control]]
 9. [[09-objection-handling-and-prevention]]
 10. [[10-follow-up]] — The Follow-Up System. Four lessons, real content.
-11. [[11-call-review-and-improvement]]
+11. [[11-call-review-and-improvement]] — Four lessons, real content.
 12. [[12-b2b-sales-and-execution-checklist]]
 13. [[13-trial-close-process]]
 14. [[14-call-nurturing]]
