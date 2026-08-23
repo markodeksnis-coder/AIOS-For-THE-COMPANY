@@ -6,7 +6,7 @@ owner: Marko
 status: draft
 updated: 2026-08-15
 tags: [sales, sales-fundamentals]
-links: ["[[sales-department]]", "[[what-sales-actually-is]]", "[[setting-the-tone-early]]", "[[tonality-slower-calmer-more-certain]]", "[[the-power-of-silence]]", "[[body-language-on-zoom]]", "[[controlling-your-energy]]", "[[call-structure-transition-and-discovery]]", "[[diagnosis-and-problem-amplifying]]", "[[positioning-and-pitch]]", "[[closing-and-decision-control]]", "[[objection-handling-and-prevention]]", "[[massive-follow-up]]", "[[call-review-and-improvement]]", "[[b2b-sales-and-execution-checklist]]", "[[trial-close-process]]", "[[call-nurturing]]", "[[sales-operations]]"]
+links: ["[[sales-department]]", "[[what-sales-actually-is]]", "[[setting-the-tone-early]]", "[[tonality-slower-calmer-more-certain]]", "[[the-power-of-silence]]", "[[body-language-on-zoom]]", "[[controlling-your-energy]]", "[[call-structure-transition-and-discovery]]", "[[diagnosis-and-problem-amplifying]]", "[[positioning-and-pitch]]", "[[closing-and-decision-control]]", "[[objection-handling-and-prevention]]", "[[follow-up-vs-chasing]]", "[[simple-follow-up-message-structure]]", "[[re-engaging-cold-leads]]", "[[knowing-when-to-stop]]", "[[call-review-and-improvement]]", "[[b2b-sales-and-execution-checklist]]", "[[trial-close-process]]", "[[call-nurturing]]", "[[sales-operations]]"]
 ---
 
 This is the index for the Sales Fundamentals curriculum. Each module below is
@@ -28,6 +28,15 @@ Six lessons, real content:
 - [[body-language-on-zoom]]
 - [[controlling-your-energy]]
 
+## 07. Massive Follow-Up — Module 7: The Follow-Up System
+
+Four lessons, real content:
+
+- [[follow-up-vs-chasing]]
+- [[simple-follow-up-message-structure]]
+- [[re-engaging-cold-leads]]
+- [[knowing-when-to-stop]]
+
 ## Remaining modules (awaiting content)
 
 - [[call-structure-transition-and-discovery]]
@@ -35,7 +44,6 @@ Six lessons, real content:
 - [[positioning-and-pitch]]
 - [[closing-and-decision-control]]
 - [[objection-handling-and-prevention]]
-- [[massive-follow-up]]
 - [[call-review-and-improvement]]
 - [[b2b-sales-and-execution-checklist]]
 - [[trial-close-process]]
