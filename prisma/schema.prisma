@@ -114,6 +114,22 @@ model AgentActivity {
   @@index([createdAt])
 }
 
+// A correction or preference the founder gave an agent in chat — "next
+// time, always mention X" — that the agent should keep applying in every
+// future conversation, not just remember for the rest of this one. This is
+// the honest substitute for fine-tuning: buildAgentSystemPrompt injects
+// every note for the department into the system prompt, so a saved
+// correction actually changes future behavior instead of just sitting in
+// a chat log nobody re-reads.
+model CoachingNote {
+  id         String   @id @default(cuid())
+  department String
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([department])
+}
+
 // Inside Sales CRM — always sales department; no `department` column needed
 // since this whole model group only exists for Sales.
 

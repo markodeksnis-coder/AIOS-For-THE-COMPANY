@@ -102,6 +102,18 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
       required: ["kpiName", "period", "value"],
     },
   },
+  {
+    name: "save_coaching_note",
+    description:
+      "Save a correction or standing preference so you keep applying it in every future conversation, not just this one. Use this whenever the founder corrects you, tells you to do something differently going forward, or gives you an explicit rule to remember — e.g. \"always mention the free trial extension in no-show follow-ups\" or \"don't suggest a payment plan for leads under $2k deal value.\" Write it as a durable instruction to your future self, not a summary of the conversation.",
+    input_schema: {
+      type: "object",
+      properties: {
+        note: { type: "string", description: "The correction or preference, written as a standing instruction." },
+      },
+      required: ["note"],
+    },
+  },
 ];
 
 type ToolOutcome = { output: unknown; summary: string | null; isError: boolean };
@@ -272,6 +284,16 @@ export async function executeAgentTool(
         return {
           output: { kpiName, period, value },
           summary: `Logged ${kpiName} = ${value} for ${period}`,
+          isError: false,
+        };
+      }
+      case "save_coaching_note": {
+        const note = str(input, "note");
+        if (!note) return { output: { error: "note is required" }, summary: null, isError: true };
+        await db.coachingNote.create({ data: { department, content: note } });
+        return {
+          output: { saved: true },
+          summary: `Saved a coaching note: "${note}"`,
           isError: false,
         };
       }
