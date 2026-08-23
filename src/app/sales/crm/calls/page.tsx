@@ -30,7 +30,11 @@ export default async function CallsPage() {
       <Card className="overflow-hidden">
         {calls.length === 0 && (
           <div className="px-4 py-6 text-center text-[0.83rem] text-text-faint">
-            No calls logged yet — log one from a lead&apos;s page.
+            No calls logged yet.{" "}
+            <Link href="/sales/crm" className="font-semibold text-accent-strong hover:underline">
+              Use the Log a call button on the CRM dashboard
+            </Link>{" "}
+            to add one, or connect Fathom/Calendly to have them land here automatically.
           </div>
         )}
         {calls.map((c) => {
