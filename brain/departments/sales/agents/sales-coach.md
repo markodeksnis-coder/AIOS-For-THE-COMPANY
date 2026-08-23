@@ -6,7 +6,7 @@ owner: Marko
 status: active
 updated: 2026-08-20
 tags: [agent, sales, coach, live]
-links: ["[[sales-department]]", "[[sales-fundamentals]]"]
+links: ["[[sales-department]]", "[[imperium-acquisition]]", "[[alex-hormozi]]"]
 ---
 
 The first agent in the company with a real runtime — [[head-of-sales]]
@@ -20,10 +20,10 @@ and the rest of the department leads followed shortly after.
 **Status:** active — [open the chat](/agents/sales-coach/chat)
 
 **Grounded in:** every `doc`-type file with `department: sales` — right
-now that's the Sales Fundamentals curriculum ([[sales-fundamentals]]) plus
-any playbooks and scripts filed under Sales. As more Sales content is
-added to `/brain`, this agent picks it up automatically on its next
-message — no redeploy needed.
+now that's the [[imperium-acquisition]] curriculum, the (currently
+placeholder) [[alex-hormozi]] curriculum, plus any playbooks and scripts
+filed under Sales. As more Sales content is added to `/brain`, this agent
+picks it up automatically on its next message — no redeploy needed.
 
 **What it's for:** answering questions against the real training content,
 role-playing discovery and objection-handling scenarios, and quizzing
