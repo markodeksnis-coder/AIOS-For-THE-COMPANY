@@ -11,17 +11,20 @@ import { LEAD_STAGES, LOGGABLE_CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REA
 export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "list_leads",
-    description: "List CRM leads, optionally filtered by stage. Use this to find a lead's id.",
+    description:
+      "List CRM leads, optionally filtered by stage and/or a name search. Use this to find a lead's id — e.g. search: \"Josh\" to find a lead named Josh.",
     input_schema: {
       type: "object",
       properties: {
         stage: { type: "string", enum: [...LEAD_STAGES], description: "Optional stage filter." },
+        search: { type: "string", description: "Optional case-insensitive substring match against the lead's name." },
       },
     },
   },
   {
     name: "get_lead",
-    description: "Get full detail on one lead: contact info, deal value, tags, notes, and its call history.",
+    description:
+      "Get full detail on one lead: contact info, deal value, tags, notes, and its full call history — each call includes its outcome, notes, recording link, exact start time, transcript (when Fathom captured one), and its post-call debrief (if one was filled in). Use this to ground a follow-up or Loom script in what actually happened on a specific call.",
     input_schema: {
       type: "object",
       properties: { leadId: { type: "string" } },
@@ -72,12 +75,12 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "save_lead_draft",
     description:
-      "Save a personalized outreach draft for a lead — the founder reviews and sends it themselves, this never sends anything. For a no-show lead, write an email AND a text (2 calls). For a closed-lost lead, write a Loom video script AND a text (2 calls).",
+      "Save a personalized outreach draft for a lead — the founder reviews and sends it themselves, this never sends anything. For a no-show lead, write an email AND a text (2 calls). For a closed-lost lead, write a Loom video script AND a text (2 calls). Use kind \"on_demand_followup\" for anything asked for directly (e.g. \"write a Loom script for Josh's call yesterday\") that isn't specifically a no-show or closed-lost trigger.",
     input_schema: {
       type: "object",
       properties: {
         leadId: { type: "string" },
-        kind: { type: "string", enum: ["no_show_followup", "closed_lost_followup"] },
+        kind: { type: "string", enum: ["no_show_followup", "closed_lost_followup", "on_demand_followup"] },
         channel: { type: "string", enum: ["email", "sms", "loom_script"] },
         content: { type: "string", description: "The actual drafted copy, ready to send/read." },
       },
@@ -109,8 +112,12 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
     switch (name) {
       case "list_leads": {
         const stage = str(input, "stage");
+        const search = str(input, "search");
+        const where: { stage?: string; name?: { contains: string } } = {};
+        if (stage) where.stage = stage;
+        if (search) where.name = { contains: search };
         const leads = await db.lead.findMany({
-          where: stage ? { stage } : undefined,
+          where: Object.keys(where).length ? where : undefined,
           orderBy: { order: "asc" },
           take: 50,
           select: {
@@ -131,7 +138,7 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         if (!leadId) return { output: { error: "leadId is required" }, summary: null, isError: true };
         const lead = await db.lead.findUnique({
           where: { id: leadId },
-          include: { calls: { orderBy: { scheduledAt: "desc" } } },
+          include: { calls: { orderBy: { scheduledAt: "desc" }, include: { debrief: true } } },
         });
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
         return { output: lead, summary: null, isError: false };
@@ -236,10 +243,12 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         const kind = str(input, "kind");
         const channel = str(input, "channel");
         const content = str(input, "content");
+        const validKinds = ["no_show_followup", "closed_lost_followup", "on_demand_followup"];
         if (
           !leadId ||
           !content ||
-          (kind !== "no_show_followup" && kind !== "closed_lost_followup") ||
+          !kind ||
+          !validKinds.includes(kind) ||
           (channel !== "email" && channel !== "sms" && channel !== "loom_script")
         ) {
           return {
@@ -252,9 +261,11 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
         await db.leadDraft.create({ data: { leadId, kind, channel, content } });
         safeRevalidate(`/sales/crm/${leadId}`);
+        const kindLabel =
+          kind === "no_show_followup" ? "no-show" : kind === "closed_lost_followup" ? "closed-lost" : "follow-up";
         return {
           output: { leadId, kind, channel },
-          summary: `Drafted a ${channel} ${kind === "no_show_followup" ? "no-show" : "closed-lost"} follow-up for "${lead.name}"`,
+          summary: `Drafted a ${channel} ${kindLabel} for "${lead.name}"`,
           isError: false,
         };
       }
