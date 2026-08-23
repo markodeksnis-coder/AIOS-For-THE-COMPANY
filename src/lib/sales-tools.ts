@@ -6,7 +6,15 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { LEAD_STAGES, LOGGABLE_CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
+import {
+  LEAD_STAGES,
+  LOGGABLE_CALL_OUTCOMES,
+  OUTCOME_TO_STAGE,
+  OUTCOME_LOSS_REASON,
+  CLOSER_STEPS,
+  ROOT_CAUSES,
+  OBJECTION_TYPES,
+} from "@/lib/crm";
 
 export const SALES_TOOLS: Anthropic.Tool[] = [
   {
@@ -85,6 +93,17 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
         content: { type: "string", description: "The actual drafted copy, ready to send/read." },
       },
       required: ["leadId", "kind", "channel", "content"],
+    },
+  },
+  {
+    name: "get_call_debriefs",
+    description:
+      "Get post-call debriefs for pattern analysis — use this for a weekly review request like \"what do I need to work on this week\" or \"what patterns should I focus on.\" Defaults to the last 7 days. Returns each debrief in full (weakest CLOSER step, root cause, objection type, the exact objection/doubt-moment/replay-moment/prospect's-blocker in the rep's own words) plus simple counts by weakest step, root cause, and objection type. The counts point at the pattern; the raw debrief text is what makes the coaching concrete — read both before answering.",
+    input_schema: {
+      type: "object",
+      properties: {
+        days: { type: "number", description: "How many days back to look. Defaults to 7." },
+      },
     },
   },
 ];
@@ -266,6 +285,58 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         return {
           output: { leadId, kind, channel },
           summary: `Drafted a ${channel} ${kindLabel} for "${lead.name}"`,
+          isError: false,
+        };
+      }
+      case "get_call_debriefs": {
+        const rawDays = input.days;
+        const days = typeof rawDays === "number" && rawDays > 0 ? rawDays : 7;
+        const since = new Date(Date.now() - days * 86_400_000);
+        const debriefs = await db.callDebrief.findMany({
+          where: { createdAt: { gte: since } },
+          include: { salesCall: { include: { lead: { select: { name: true } } } } },
+          orderBy: { createdAt: "desc" },
+        });
+
+        const countBy = <T extends string>(values: readonly T[], get: (d: (typeof debriefs)[number]) => string | null) =>
+          values
+            .map((v) => ({ value: v, count: debriefs.filter((d) => get(d) === v).length }))
+            .filter((r) => r.count > 0)
+            .sort((a, b) => b.count - a.count);
+
+        const scores = (get: (d: (typeof debriefs)[number]) => number | null) =>
+          debriefs.map(get).filter((n): n is number => n !== null);
+        const avg = (nums: number[]) => (nums.length ? Math.round((nums.reduce((s, n) => s + n, 0) / nums.length) * 10) / 10 : null);
+
+        return {
+          output: {
+            periodDays: days,
+            totalDebriefs: debriefs.length,
+            avgScriptAdherence: avg(scores((d) => d.scriptAdherence)),
+            avgCommitmentScore: avg(scores((d) => d.commitmentScore)),
+            weakestStepCounts: countBy(CLOSER_STEPS, (d) => d.weakestStep),
+            rootCauseCounts: countBy(ROOT_CAUSES, (d) => d.rootCause),
+            objectionTypeCounts: countBy(OBJECTION_TYPES, (d) => d.objectionType),
+            debriefs: debriefs.map((d) => ({
+              leadName: d.salesCall.lead.name,
+              callDate: d.salesCall.scheduledAt,
+              outcome: d.salesCall.outcome,
+              weakestStep: d.weakestStep,
+              rootCause: d.rootCause,
+              objectionType: d.objectionType,
+              objectionOther: d.objectionOther,
+              finalObjection: d.finalObjection,
+              doubtMoment: d.doubtMoment,
+              replayMoment: d.replayMoment,
+              prospectDream: d.prospectDream,
+              prospectBlocker: d.prospectBlocker,
+              notEstablished: d.notEstablished,
+              endReason: d.endReason,
+              scriptAdherence: d.scriptAdherence,
+              commitmentScore: d.commitmentScore,
+            })),
+          },
+          summary: null,
           isError: false,
         };
       }
