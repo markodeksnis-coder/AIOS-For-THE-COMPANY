@@ -60,7 +60,7 @@ export default async function DepartmentPage({
           href={`/docs?department=${dept}`}
           className="px-3 py-2 text-[0.83rem] font-semibold text-text-dim transition-colors hover:text-foreground"
         >
-          Documents
+          Knowledge
         </Link>
       </div>
 

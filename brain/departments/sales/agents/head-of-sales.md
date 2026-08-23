@@ -17,7 +17,8 @@ links: ["[[sales-department]]"]
 **Status:** active — [open the chat](/agents/head-of-sales/chat)
 
 **Grounded in:** every `doc`-type file with `department: sales`
-([[sales-fundamentals]] and anything else filed under Sales), plus its own
+([[imperium-acquisition]], [[alex-hormozi]], and anything else filed under
+Sales), plus its own
 department's live Issues, Projects, and Scorecard KPIs — appointments
 booked, show-up rate, close rate.
 
