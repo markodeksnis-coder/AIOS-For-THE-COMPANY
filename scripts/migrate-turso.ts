@@ -71,13 +71,22 @@ async function main() {
       await client.executeMultiple(sql);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      // A previous run can crash after creating the tables but before the
-      // INSERT below records it as applied (e.g. a build got interrupted).
-      // The DDL already matches this migration, so treat that as done
-      // instead of failing every build from here on.
-      if (/already exists/i.test(message)) {
+      // A previous run can crash after applying the DDL but before the
+      // INSERT below records it as applied (e.g. a build got interrupted,
+      // or the migration was applied through `prisma migrate deploy`
+      // directly instead of through this script). Either way the database
+      // already matches this migration, so treat that as done instead of
+      // failing every build from here on — "already exists" for a CREATE
+      // that already ran, "no such table/index/column" for a DROP that
+      // already ran, "duplicate column name" for an ADD COLUMN that
+      // already ran.
+      if (
+        /already exists/i.test(message) ||
+        /no such (table|index|column)/i.test(message) ||
+        /duplicate column name/i.test(message)
+      ) {
         console.warn(
-          `migrate-turso: ${folder} objects already exist — an earlier run likely applied this but didn't get to record it. Marking as applied.`
+          `migrate-turso: ${folder} already matches the database — an earlier run likely applied this but didn't get to record it. Marking as applied.`
         );
       } else {
         throw err;

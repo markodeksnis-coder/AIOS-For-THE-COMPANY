@@ -18,6 +18,7 @@ export function LeadPicker({
   autoFocus,
   onEscape,
   className,
+  dropUp,
 }: {
   leads: PickedLead[];
   onSelect: (lead: PickedLead) => void;
@@ -25,6 +26,8 @@ export function LeadPicker({
   autoFocus?: boolean;
   onEscape?: () => void;
   className?: string;
+  /** Open the results dropdown above the input instead of below — for a picker anchored near the bottom of the viewport. */
+  dropUp?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -72,7 +75,9 @@ export function LeadPicker({
         onBlur={() => setTimeout(() => onEscape?.(), 150)}
       />
       {(matches.length > 0 || canCreate) && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+        <div
+          className={`absolute right-0 z-10 w-64 overflow-hidden rounded-lg border border-border bg-surface shadow-lg ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
+        >
           {matches.map((l) => (
             <button
               key={l.id}
@@ -100,7 +105,9 @@ export function LeadPicker({
         </div>
       )}
       {matches.length === 0 && !canCreate && query.trim() && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-64 rounded-lg border border-border bg-surface px-3 py-2 text-[0.78rem] text-text-faint shadow-lg">
+        <div
+          className={`absolute right-0 z-10 w-64 rounded-lg border border-border bg-surface px-3 py-2 text-[0.78rem] text-text-faint shadow-lg ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
+        >
           No lead matches &ldquo;{query}&rdquo;.
         </div>
       )}

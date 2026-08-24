@@ -4,16 +4,27 @@ import { useState } from "react";
 import { logSalesCall } from "@/lib/actions/leads";
 import { Card } from "@/components/ui/card";
 import { Button, Label, Select, TextArea, TextInput } from "@/components/ui/field";
-import { LOGGABLE_CALL_OUTCOMES, CALL_OUTCOME_LABELS, OUTCOME_LOSS_REASON, type CallOutcome } from "@/lib/crm";
+import {
+  CALL_STATUSES,
+  CALL_STATUS_LABELS,
+  CALL_RESULTS,
+  CALL_RESULT_LABELS,
+  RESULT_LOSS_REASON,
+  toBerlinDatetimeLocal,
+  type CallStatus,
+  type CallResult,
+} from "@/lib/crm";
 
-const LOST_OUTCOMES = new Set<CallOutcome>(["no_money", "not_a_fit"]);
+const LOST_RESULTS = new Set<CallResult>(["closed_lost", "not_qualified"]);
 
 type PendingCall = { scheduledAt: string; recordingLink: string | null; notes: string | null };
 
 export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCall?: PendingCall | null }) {
   const [pending, setPending] = useState(false);
-  const [outcome, setOutcome] = useState<CallOutcome>("pif");
-  const isLost = LOST_OUTCOMES.has(outcome);
+  const [callStatus, setCallStatus] = useState<CallStatus>("showed");
+  const [result, setResult] = useState<CallResult | "">("");
+  const isLost = result !== "" && LOST_RESULTS.has(result);
+  const showsResult = callStatus === "showed";
 
   return (
     <Card id="log-call" className="scroll-mt-6 p-4">
@@ -34,24 +45,44 @@ export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCa
       >
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Date</Label>
+            <Label>Date / time</Label>
             <TextInput
               name="scheduledAt"
-              type="date"
+              type="datetime-local"
               required
-              defaultValue={pendingCall?.scheduledAt ?? new Date().toISOString().slice(0, 10)}
+              defaultValue={pendingCall?.scheduledAt ?? toBerlinDatetimeLocal(new Date())}
             />
           </div>
           <div>
-            <Label>Outcome</Label>
-            <Select name="outcome" value={outcome} onChange={(e) => setOutcome(e.target.value as CallOutcome)}>
-              {LOGGABLE_CALL_OUTCOMES.map((o) => (
-                <option key={o} value={o}>
-                  {CALL_OUTCOME_LABELS[o]}
+            <Label>Call status</Label>
+            <Select
+              name="callStatus"
+              value={callStatus}
+              onChange={(e) => {
+                setCallStatus(e.target.value as CallStatus);
+                setResult("");
+              }}
+            >
+              {CALL_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {CALL_STATUS_LABELS[s]}
                 </option>
               ))}
             </Select>
           </div>
+          {showsResult && (
+            <div>
+              <Label>Result</Label>
+              <Select name="result" value={result} onChange={(e) => setResult(e.target.value as CallResult | "")}>
+                <option value="">— not yet —</option>
+                {CALL_RESULTS.map((r) => (
+                  <option key={r} value={r}>
+                    {CALL_RESULT_LABELS[r]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
           <div>
             <Label>Rep</Label>
             <TextInput name="rep" placeholder="Who took the call" />
@@ -60,7 +91,7 @@ export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCa
             <Label>Cash collected</Label>
             <TextInput name="cashCollected" type="number" min="0" step="0.01" placeholder="0" />
           </div>
-          {outcome === "plan" && (
+          {result === "closed_won" && (
             <div>
               <Label>Plan length</Label>
               <TextInput name="planLength" placeholder="6 months…" />
@@ -69,7 +100,7 @@ export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCa
           {isLost && (
             <div>
               <Label>Loss reason</Label>
-              <TextInput name="lossReason" defaultValue={OUTCOME_LOSS_REASON[outcome] ?? ""} />
+              <TextInput name="lossReason" defaultValue={result ? (RESULT_LOSS_REASON[result] ?? "") : ""} />
             </div>
           )}
         </div>

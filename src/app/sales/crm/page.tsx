@@ -5,15 +5,12 @@ import { Card } from "@/components/ui/card";
 import { IconTile } from "@/components/icon-tile";
 import { CrmBoard, type LeadRow } from "@/components/crm/crm-board";
 import { IntegrationStatus } from "@/components/crm/integration-status";
-import { LogCallQuickSearch } from "@/components/crm/log-call-quick-search";
 import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
 
 const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-COMPANY/blob/main";
 
 export const dynamic = "force-dynamic";
 
-const SHOWED_OUTCOMES = new Set(["booked_2nd_call", "pif", "plan", "no_money", "not_a_fit", "completed"]);
-const WON_OUTCOMES = new Set(["pif", "plan"]);
 const OPEN_STAGES = new Set(["new_lead", "booked_unconfirmed", "confirmed", "showed"]);
 
 export default async function CrmPage() {
@@ -24,10 +21,10 @@ export default async function CrmPage() {
   ]);
 
   const allCalls = leads.flatMap((l) => l.calls);
-  const showed = allCalls.filter((c) => SHOWED_OUTCOMES.has(c.outcome));
-  const noShows = allCalls.filter((c) => c.outcome === "no_show");
-  const won = allCalls.filter((c) => WON_OUTCOMES.has(c.outcome));
-  const attempted = showed.length + noShows.length; // excludes canceled — never really attempted
+  const showed = allCalls.filter((c) => c.callStatus === "showed");
+  const noShows = allCalls.filter((c) => c.callStatus === "no_show");
+  const won = allCalls.filter((c) => c.result === "closed_won");
+  const attempted = showed.length + noShows.length; // excludes cancelled/rescheduled — never really attempted
   const showRate = attempted > 0 ? Math.round((showed.length / attempted) * 100) : 0;
   const closeRate = showed.length > 0 ? Math.round((won.length / showed.length) * 100) : 0;
 
@@ -95,7 +92,7 @@ export default async function CrmPage() {
     dealValue: l.dealValue,
     stageProbability: l.stageProbability,
     cashCollected: l.cashCollected,
-    noShowCount: l.calls.filter((c) => c.outcome === "no_show").length,
+    noShowCount: l.calls.filter((c) => c.callStatus === "no_show").length,
     nextCallAt: l.nextCallAt ? l.nextCallAt.toISOString() : null,
   }));
 
@@ -112,7 +109,6 @@ export default async function CrmPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <LogCallQuickSearch leads={leads.map((l) => ({ id: l.id, name: l.name }))} />
           <Link
             href="/sales/crm/leads"
             className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
@@ -293,14 +289,14 @@ function QueueCard({ title, rows, empty }: { title: string; rows: string[]; empt
   );
 }
 
-type KeyedCall = { key: string; outcome: string; cashCollected: number | null };
+type KeyedCall = { key: string; callStatus: string; result: string | null; cashCollected: number | null };
 
 function breakdownRows(calls: KeyedCall[]) {
   const grouped = groupBy(calls, (c) => c.key);
   return Object.entries(grouped).map(([key, group]) => {
-    const groupShowed = group.filter((c) => SHOWED_OUTCOMES.has(c.outcome));
-    const groupNoShows = group.filter((c) => c.outcome === "no_show");
-    const groupWon = group.filter((c) => WON_OUTCOMES.has(c.outcome));
+    const groupShowed = group.filter((c) => c.callStatus === "showed");
+    const groupNoShows = group.filter((c) => c.callStatus === "no_show");
+    const groupWon = group.filter((c) => c.result === "closed_won");
     const groupAttempted = groupShowed.length + groupNoShows.length;
     const cash = group.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
     return {

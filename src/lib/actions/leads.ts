@@ -5,11 +5,15 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import {
   LEAD_STAGES,
-  LOGGABLE_CALL_OUTCOMES,
-  OUTCOME_TO_STAGE,
-  OUTCOME_LOSS_REASON,
+  CALL_STATUSES,
+  CALL_RESULTS,
+  CALL_STATUS_TO_STAGE,
+  CALL_RESULT_TO_STAGE,
+  RESULT_LOSS_REASON,
   STAGE_DEFAULT_PROBABILITY,
   type LeadStage,
+  type CallStatus,
+  type CallResult,
 } from "@/lib/crm";
 
 function str(formData: FormData, key: string): string | null {
@@ -189,34 +193,51 @@ export async function deleteLead(id: string) {
   redirect("/sales/crm");
 }
 
-/** Logs a call disposition and moves the lead's stage to match it — a call
- *  is the event that actually changes where a lead sits on the CRM board. */
+/** Logs a call (status + optional result) and moves the lead's stage to
+ *  match it — a call is the event that actually changes where a lead sits
+ *  on the CRM board. Takes a single date/time value and splits it into
+ *  SalesCall's date-only scheduledAt (used everywhere calls are grouped by
+ *  day) and precise startedAt (used to disambiguate same-day calls). */
 export async function logSalesCall(leadId: string, formData: FormData) {
-  const scheduledAt = str(formData, "scheduledAt");
-  const outcome = str(formData, "outcome") ?? "no_show";
-  if (!scheduledAt) throw new Error("Call date is required");
-  if (!LOGGABLE_CALL_OUTCOMES.includes(outcome as never)) throw new Error(`Invalid outcome: ${outcome}`);
+  const occurredAtRaw = str(formData, "scheduledAt");
+  if (!occurredAtRaw) throw new Error("Call date/time is required");
+  const occurredAt = new Date(occurredAtRaw);
+  if (Number.isNaN(occurredAt.getTime())) throw new Error("Invalid call date/time");
+  const scheduledAt = occurredAt.toISOString().slice(0, 10);
+
+  const callStatus = str(formData, "callStatus") ?? "showed";
+  if (!(CALL_STATUSES as readonly string[]).includes(callStatus)) throw new Error(`Invalid call status: ${callStatus}`);
+  const resultRaw = str(formData, "result");
+  const result = resultRaw && (CALL_RESULTS as readonly string[]).includes(resultRaw) ? resultRaw : null;
 
   const cashCollected = num(formData, "cashCollected");
-  const lossReason = str(formData, "lossReason") ?? OUTCOME_LOSS_REASON[outcome as never] ?? null;
+  const lossReason = str(formData, "lossReason") ?? (result ? RESULT_LOSS_REASON[result as CallResult] : null) ?? null;
   const recordingLink = str(formData, "recordingLink");
   const notes = str(formData, "notes");
 
   await db.$transaction(async (tx) => {
-    // A Fathom recording may have already created a "completed, pending
-    // disposition" row for this lead's most recent call — finish that row
-    // instead of logging a second one for the same call.
-    const pending = await tx.salesCall.findFirst({
-      where: { leadId, outcome: "completed" },
-      orderBy: { createdAt: "desc" },
-    });
+    // A Fathom recording may have already created a "showed, pending
+    // result" row for this lead's most recent call — finish that row
+    // instead of logging a second one for the same call. Only applies when
+    // this log entry is itself disposing of a call that happened (showed
+    // or no-show) — a fresh "booked"/"rescheduled" entry is a different,
+    // future call and always gets its own row.
+    const pending =
+      callStatus === "showed" || callStatus === "no_show"
+        ? await tx.salesCall.findFirst({
+            where: { leadId, callStatus: "showed", result: null },
+            orderBy: { createdAt: "desc" },
+          })
+        : null;
 
     if (pending) {
       await tx.salesCall.update({
         where: { id: pending.id },
         data: {
           scheduledAt,
-          outcome,
+          startedAt: occurredAt,
+          callStatus,
+          result,
           rep: str(formData, "rep"),
           recordingLink: recordingLink ?? pending.recordingLink,
           planLength: str(formData, "planLength"),
@@ -230,7 +251,9 @@ export async function logSalesCall(leadId: string, formData: FormData) {
         data: {
           leadId,
           scheduledAt,
-          outcome,
+          startedAt: occurredAt,
+          callStatus,
+          result,
           rep: str(formData, "rep"),
           recordingLink,
           planLength: str(formData, "planLength"),
@@ -241,18 +264,74 @@ export async function logSalesCall(leadId: string, formData: FormData) {
       });
     }
 
-    const stage = OUTCOME_TO_STAGE[outcome as never];
-    const data: { stage?: string; stageProbability?: number; lossReason?: string | null; cashCollected?: { increment: number } } = {};
+    const stage = result
+      ? CALL_RESULT_TO_STAGE[result as CallResult]
+      : CALL_STATUS_TO_STAGE[callStatus as CallStatus];
+    const data: {
+      stage?: string;
+      stageProbability?: number;
+      lossReason?: string | null;
+      cashCollected?: { increment: number };
+      nextCallAt: Date | null;
+    } = {
+      // A "booked"/"rescheduled" log is itself the next upcoming call; any
+      // other status means the call it referred to is done, so there's
+      // nothing left to count as "next."
+      nextCallAt: callStatus === "booked" || callStatus === "rescheduled" ? occurredAt : null,
+    };
     if (stage) {
       data.stage = stage;
       data.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
     }
     if (stage === "closed_lost") data.lossReason = lossReason;
     if (cashCollected) data.cashCollected = { increment: cashCollected };
-    if (Object.keys(data).length) await tx.lead.update({ where: { id: leadId }, data });
+    await tx.lead.update({ where: { id: leadId }, data });
   });
 
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${leadId}`);
+  revalidatePath("/sales/crm/calls");
+}
+
+/** Updates an already-logged call in place — used by the editable "last 20
+ *  calls" table. Re-derives the lead's stage the same way logSalesCall
+ *  does, so editing a call after the fact keeps the pipeline honest. */
+export async function updateSalesCall(callId: string, formData: FormData) {
+  const call = await db.salesCall.findUnique({ where: { id: callId } });
+  if (!call) throw new Error("Call not found");
+
+  const occurredAtRaw = str(formData, "scheduledAt");
+  const occurredAt = occurredAtRaw ? new Date(occurredAtRaw) : new Date(call.startedAt ?? call.scheduledAt);
+  if (Number.isNaN(occurredAt.getTime())) throw new Error("Invalid call date/time");
+  const scheduledAt = occurredAt.toISOString().slice(0, 10);
+
+  const callStatus = str(formData, "callStatus") ?? call.callStatus;
+  if (!(CALL_STATUSES as readonly string[]).includes(callStatus)) throw new Error(`Invalid call status: ${callStatus}`);
+  const resultRaw = str(formData, "result");
+  const result = resultRaw && (CALL_RESULTS as readonly string[]).includes(resultRaw) ? resultRaw : null;
+
+  const cashCollected = num(formData, "cashCollected");
+  const lossReason = str(formData, "lossReason") ?? (result ? RESULT_LOSS_REASON[result as CallResult] : null) ?? null;
+  const notes = str(formData, "notes");
+
+  await db.$transaction(async (tx) => {
+    await tx.salesCall.update({
+      where: { id: callId },
+      data: { scheduledAt, startedAt: occurredAt, callStatus, result, cashCollected, lossReason, notes },
+    });
+
+    const stage = result
+      ? CALL_RESULT_TO_STAGE[result as CallResult]
+      : CALL_STATUS_TO_STAGE[callStatus as CallStatus];
+    if (stage) {
+      await tx.lead.update({
+        where: { id: call.leadId },
+        data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] },
+      });
+    }
+  });
+
+  revalidatePath("/sales/crm");
+  revalidatePath(`/sales/crm/${call.leadId}`);
   revalidatePath("/sales/crm/calls");
 }

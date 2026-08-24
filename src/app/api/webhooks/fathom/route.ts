@@ -85,7 +85,8 @@ export async function POST(request: NextRequest) {
         data: {
           leadId: lead.id,
           scheduledAt,
-          outcome: "completed",
+          callStatus: "showed",
+          result: null,
           recordingLink: recordingUrl,
           notes: summary,
           fathomRecordingId: recordingId,
