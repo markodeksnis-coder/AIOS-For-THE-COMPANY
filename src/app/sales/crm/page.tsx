@@ -114,6 +114,12 @@ export default async function CrmPage() {
         <div className="flex shrink-0 items-center gap-2">
           <LogCallQuickSearch leads={leads.map((l) => ({ id: l.id, name: l.name }))} />
           <Link
+            href="/sales/crm/leads"
+            className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
+          >
+            Leads →
+          </Link>
+          <Link
             href="/sales/crm/debriefs"
             className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
           >

@@ -141,6 +141,7 @@ model Lead {
   name             String
   email            String?
   phone            String?
+  company          String?
   timezone         String?
   source           String? // e.g. "facebook ads", "referral", "organic", "cold outreach"
   funnel           String? // campaign/funnel name

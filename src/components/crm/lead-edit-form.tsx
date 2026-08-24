@@ -9,6 +9,7 @@ export type EditableLead = {
   name: string;
   email: string | null;
   phone: string | null;
+  company: string | null;
   timezone: string | null;
   source: string | null;
   funnel: string | null;
@@ -46,6 +47,10 @@ export function LeadEditForm({ lead }: { lead: EditableLead }) {
         <div>
           <Label>Phone</Label>
           <TextInput name="phone" defaultValue={lead.phone ?? ""} />
+        </div>
+        <div>
+          <Label>Company</Label>
+          <TextInput name="company" defaultValue={lead.company ?? ""} />
         </div>
         <div>
           <Label>Timezone</Label>

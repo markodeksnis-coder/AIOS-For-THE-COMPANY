@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Mail, Phone, DollarSign, Clock, MapPin, AtSign, CalendarClock } from "lucide-react";
+import { Mail, Phone, DollarSign, Clock, MapPin, AtSign, CalendarClock, Building2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { LeadStageSelect } from "@/components/crm/lead-stage-select";
@@ -83,6 +83,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               {lead.phone && (
                 <span className="flex items-center gap-1.5">
                   <Phone size={13} /> {lead.phone}
+                </span>
+              )}
+              {lead.company && (
+                <span className="flex items-center gap-1.5">
+                  <Building2 size={13} /> {lead.company}
                 </span>
               )}
               {lead.timezone && (
@@ -225,6 +230,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               name: lead.name,
               email: lead.email,
               phone: lead.phone,
+              company: lead.company,
               timezone: lead.timezone,
               source: lead.source,
               funnel: lead.funnel,

@@ -41,6 +41,10 @@ export function NewLeadForm() {
             <TextInput name="phone" placeholder="+1 555 0100" />
           </div>
           <div>
+            <Label>Company</Label>
+            <TextInput name="company" placeholder="Acme Agency" />
+          </div>
+          <div>
             <Label>Timezone</Label>
             <TextInput name="timezone" placeholder="ET, PT…" />
           </div>

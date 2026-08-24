@@ -36,6 +36,7 @@ function leadFieldsFromForm(formData: FormData) {
   return {
     email: str(formData, "email"),
     phone: str(formData, "phone"),
+    company: str(formData, "company"),
     timezone: str(formData, "timezone"),
     source: str(formData, "source"),
     funnel: str(formData, "funnel"),
@@ -100,6 +101,86 @@ export async function moveLead(movedId: string, stage: string, columnOrder: stri
     ...columnOrder.map((id, index) => db.lead.update({ where: { id }, data: { order: index } })),
   ]);
   revalidatePath("/sales/crm");
+}
+
+/** Bare-minimum lead creation for the inline "+ Create as new lead" option
+ *  in the search-as-you-type lead picker — just a name, so adding someone
+ *  never means leaving what you're doing. Everything else gets filled in
+ *  later from the lead's own page. */
+export async function createLeadQuick(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Name is required");
+  const stage: LeadStage = "new_lead";
+  const lead = await db.lead.create({
+    data: { name: trimmed, stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage] },
+  });
+  revalidatePath("/sales/crm");
+  revalidatePath("/sales/crm/leads");
+  return { id: lead.id, name: lead.name };
+}
+
+export type CsvLeadRow = {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  source: string | null;
+  notes: string | null;
+};
+
+/** Bulk-creates leads from an already column-mapped CSV, skipping any row
+ *  whose email or phone matches an existing lead — checked against the DB
+ *  and against earlier rows in the same file, so duplicates within the
+ *  upload itself are caught too. */
+export async function importLeadsCsv(rows: CsvLeadRow[]) {
+  const existing = await db.lead.findMany({ select: { email: true, phone: true } });
+  const existingEmails = new Set(existing.map((l) => l.email?.trim().toLowerCase()).filter((v): v is string => Boolean(v)));
+  const existingPhones = new Set(existing.map((l) => l.phone?.trim()).filter((v): v is string => Boolean(v)));
+  const seenEmails = new Set<string>();
+  const seenPhones = new Set<string>();
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const name = row.name?.trim();
+    if (!name) {
+      skipped++;
+      continue;
+    }
+    const email = row.email?.trim() || null;
+    const phone = row.phone?.trim() || null;
+    const emailKey = email?.toLowerCase() ?? null;
+
+    const isDuplicate =
+      (emailKey !== null && (existingEmails.has(emailKey) || seenEmails.has(emailKey))) ||
+      (phone !== null && (existingPhones.has(phone) || seenPhones.has(phone)));
+
+    if (isDuplicate) {
+      skipped++;
+      continue;
+    }
+
+    await db.lead.create({
+      data: {
+        name,
+        email,
+        phone,
+        company: row.company?.trim() || null,
+        source: row.source?.trim() || null,
+        notes: row.notes?.trim() || null,
+        stage: "new_lead",
+        stageProbability: STAGE_DEFAULT_PROBABILITY.new_lead,
+      },
+    });
+    created++;
+    if (emailKey) seenEmails.add(emailKey);
+    if (phone) seenPhones.add(phone);
+  }
+
+  revalidatePath("/sales/crm");
+  revalidatePath("/sales/crm/leads");
+  return { created, skipped };
 }
 
 export async function deleteLead(id: string) {
