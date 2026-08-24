@@ -1,0 +1,263 @@
+{
+  "leadTemperatureStages": [
+    {
+      "id": "hot_list",
+      "label": "Hot List",
+      "definition": "Ready to buy this week, just needs final push or call, you expect them to close now"
+    },
+    {
+      "id": "warm_list",
+      "label": "Warm List",
+      "definition": "Interested but not 100% ready, needs follow-up/nurture, likely to close within 30 days"
+    },
+    {
+      "id": "general_list",
+      "label": "General List",
+      "definition": "\"Okay\" leads, not ready, needs a lot of work, might close after 30+ days, if ever"
+    },
+    {
+      "id": "disqualified",
+      "label": "Disqualified",
+      "definition": "They are not a fit for the offer, now or in the future. Could be due to budget, country, role or mindset."
+    },
+    {
+      "id": "call_no_show",
+      "label": "Call No Show",
+      "definition": "Prospect didn't show for the booked call."
+    },
+    {
+      "id": "call_cancelled",
+      "label": "Call Cancelled",
+      "definition": "Prospect cancelled the booked call."
+    }
+  ],
+
+  "sequenceRouting": {
+    "hot_list_no_followup_booked": "hot_list_sop_1",
+    "hot_list_followup_booked": "hot_list_sop_2",
+    "warm_list": "warm_list_sop",
+    "general_list": "general_list_sop",
+    "disqualified": null,
+    "call_no_show": null,
+    "call_cancelled": null,
+    "notes": "Disqualified/No-show/Cancelled: no sequence in this file yet — per the SOP, disqualified just gets logged, and no-show/cancelled needs a separate short sequence that hasn't been written yet."
+  },
+
+  "sequences": [
+    {
+      "id": "basic_template",
+      "name": "Basic Post-Call Sequence (Day 1–180)",
+      "useWhen": "Fallback sequence to use if the pipeline isn't structured into Hot/Warm/General yet. Every day sends a matched Email + SMS pair.",
+      "messages": [
+        { "day": 1, "channel": "email", "subject": "Great call NAME", "body": "Really enjoyed our conversation earlier. You’ve built something impressive, and I respect the way you think about SOMETHING RELATED TO THEM GROWING THE BUSINESS.\nYou mentioned OBJECTION, which totally makes sense. A lot of top founders I’ve spoken to have felt the same way at first.\nBut here’s something worth considering… when you look at KEY ISSUE, what’s the real cost of keeping things the same?\nThe biggest wins usually come from changing the approach, not just working harder. That’s the whole reason Tom built this… because what got you here won’t get you there.\nNo rush on a decision, just wanted to leave you with that thought. If you ever want to take another look, you know where to find me.\n[Your Name]" },
+        { "day": 1, "channel": "sms", "body": "Hey NAME, in case you haven’t seen my email.. really enjoyed our convo earlier. One thing stuck with me, when you mentioned OBJECTION, I totally get where you’re coming from. A lot of top founders felt the same way at first.\nBut let me ask you this: If you keep tackling KEY CHALLENGE the way you are now, how confident are you that you’ll get the results you actually want?\nNo rush, just something worth considering. If you ever want to revisit, let me know. Always happy to chat." },
+
+        { "day": 2, "channel": "email", "subject": "You still thinking about it?", "body": "Hey NAME,\nNo pressure, just checking in, where’s your head at after the call?\nTom’s worked with a lot of high-level operators, and what we find is that the biggest bottleneck isn’t tactics, it’s mindset and execution at scale.\nIf you’re still thinking through things, would love to chat and help you get more clarity. Otherwise, no problem, I’ll send over some insights you might find useful.\nLet me know,\n[Your Name]" },
+        { "day": 2, "channel": "sms", "body": "Hey [First Name], just checking in. What’s your gut feeling after the call? No rush, just want to see where you’re at." },
+
+        { "day": 5, "channel": "email", "subject": "What 7-figure founders miss about scaling", "body": "Hey NAME,\nI was on a call with Will (Tom’s right hand in BUSINESS NAME) the other day, and something he said stuck with me.\n\"Scaling isn’t about doing more. It’s about doing differently.\"\nMost 7-8 figure founders hit a point where what got them here won’t get them there, but they double down instead of shifting strategies. That’s how businesses plateau.\nDo you fell like you’re in that phase right now?\n[Your Name]" },
+        { "day": 5, "channel": "sms", "body": "Most 7-figure founders plateau because they double down instead of shifting strategy. Tom has a different approach. Want me to send it over?" },
+
+        { "day": 8, "channel": "email", "subject": "Tom would say this to you", "body": "Hey [First Name],\nIf Tom were in your shoes, he’d tell you this:\n\"Your success is a reflection of your willingness to adapt, especially when you think you’ve got it all figured out.\"\nThat’s why he built this. It’s not for people who think they’ve already won, it’s for founders who want to win bigger.\nIs there any way you feel we could support you with making that shift?\n[Your Name]" },
+        { "day": 8, "channel": "sms", "body": "Tom would tell you this: \"Your success is a reflection of your willingness to adapt.\" If you’re ready to go bigger and feel like this might be for you, do you think it would be appropriate to reconnect?" },
+
+        { "day": 11, "channel": "email", "subject": "Quest Nutrition almost never happened", "body": "Hey [First Name],\nCrazy story: Tom almost didn’t start Quest Nutrition.\nBack then, he had a thriving manufacturing business already. But he realized he was winning in the wrong game.\nSo he closed it down and opened Quest Nutrition.\nMost people won’t make that kind of pivot when they need to. Most people double down on a flawed strategy.\nObviously most business owners don’t need to make THAT BIG of a jump to get where they want.\nDo you feel like what you’re doing now is gonna get you to where you wanna go?\n[Your Name]" },
+        { "day": 11, "channel": "sms", "body": "Tom almost never built Quest. He had a thriving manufacturing business but he felt like he was winning in the wrong game. Do you feel like what you’re doing now is gonna get you to where you wanna go?" },
+
+        { "day": 14, "channel": "email", "subject": "You know what to do, but…", "body": "Hey [First Name],\nMost high-level founders already know what to do.\nThe problem is actually doing it at scale.\nExecution gaps. Hiring the right people. Getting out of the weeds. Or even something they don’t see (because as they say.. “you don’t know what you don’t know”)\nWhatever it is, there’s a reason most founders stall between 7-8 figures.\nIf that sounds familiar, we should probably talk how Tom could help you out with that.\nLet me know.\n[Your Name]" },
+        { "day": 14, "channel": "sms", "body": "Most high-level founders know what to do. The problem is execution at scale because… you don’t know what you don’t know. You feeling that too? Like some puzzle pieces are missing?" },
+
+        { "day": 21, "channel": "email", "subject": "Offense vs. defense", "body": "Hey [First Name],\nMost 7-figure founders start playing not to lose, instead of playing to win.\nThat’s when things slow down.\nTom built this for people who refuse to play defense.\nIf you’re still stuck in the same place as last month, maybe it’s time to have another conversation.\nYou in?\n[Your Name]" },
+        { "day": 21, "channel": "sms", "body": "Most founders shift from offense to defense when they hit 7 figures. That’s when they stall. Let’s make sure that’s not you. Do you think it would be appropriate to reconnect?" },
+
+        { "day": 28, "channel": "email", "subject": "Thought you’d outgrow this email by now", "body": "Hey [First Name],\nFigured you’d be too busy running the game by now to still be seeing my emails.\nBut if not, that tells me:\n1. You’re crushing it\n2. You’re still figuring out that next move\nEither way, I’ve got something that’ll help. Want me to send it over?\n[Your Name]" },
+        { "day": 28, "channel": "sms", "body": "Figured you’d be too busy scaling to still be getting these texts. Whether you’re crushing it or still figuring out the next moves.. would love to support ya. Anything specific you’re working on? We might have some resources to send over" },
+
+        { "day": 30, "channel": "email", "subject": "Thought you’d outgrow this email by now", "body": "Hey [First Name],\nFigured you’d be too busy running the game by now to still be seeing my emails.\nBut if not, that tells me:\n3. You’re crushing it\n4. You’re still figuring out that next move\nEither way, I’ve got something that’ll help. Want me to send it over?\n[Your Name]", "notes": "Same subject and near-identical body as Day 28 in the source doc (numbered list continues 3/4 instead of resetting to 1/2) — transcribed exactly as given, not deduplicated." },
+        { "day": 30, "channel": "sms", "body": "Figured you’d be too busy scaling to still be getting these texts. Whether you’re crushing it or still figuring out the next moves.. would love to support ya. Anything specific you’re working on? We might have some resources to send over" },
+
+        { "day": 49, "channel": "email", "subject": "What makes billion-dollar founders different?", "body": "Hey [First Name],\nThe biggest difference between a seven-figure founder and a billion-dollar founder?\nHow fast they move when the next big opportunity shows up.\nYou’ve been seeing these emails for a while now. If you haven’t made a move yet, what’s stopping you? If anything\n[Your Name]" },
+        { "day": 49, "channel": "sms", "body": "Billion-dollar founders move fast when the right opportunity shows up. Have you been moving fast, or waiting too long? Let me know" },
+
+        { "day": 63, "channel": "email", "subject": "What’s stopping you?", "body": "Hey [First Name],\nIf you’re still here, I’ll assume two things:\n1. You’re interested.\n2. You haven’t been fully convinced yet.\nSo let’s do this, tell me the one thing holding you back.\nIf Tom can’t help, I’ll say so (full transparency).\nIf we can, might be a good time to reconnect.\nSounds fair?\n[Your Name]" },
+        { "day": 63, "channel": "sms", "body": "If you’re still here, I’ll assume you’re interested but waiting for the right time or not convinced yet. What’s holding you back? If anything" },
+
+        { "day": 70, "channel": "email", "subject": "I’ll make this my last email for now", "body": "Hey [First Name],\nThis is the last time I’ll reach out.\nNo more follow-ups. No more emails.\nIf you ever want to scale with Tom’s guidance, you know where to find me.\nJust dropping that video here for you from one of the onsite trainings that Tom did with our other students from the Inner Circle: LINK TO THE VIDEO\nI have a bunch more of resources like this. Let me know what you think\n[Your Name]" },
+        { "day": 70, "channel": "sms", "body": "Last message from me. If you ever want to talk about scaling, you know where to find me.\n\nLINK TO THE VIDEO: just dropping that video here from one of our Inner Circle meetings. Let me know what you think" },
+
+        { "day": 75, "channel": "email", "subject": "You still thinking about this?", "body": "Hey NAME,\nNot chasing. Just curious if this is still somewhere on your radar.\nIf the timing lines up better now, we can take a look and quietly figure out if it makes sense to revisit.\nNo pressure. If it’s relevant, you’ll know.\nYOUR NAME" },
+        { "day": 75, "channel": "sms", "body": "Hey NAME, not chasing. Just checking if this is still somewhere on your radar. If timing’s better now, we can quietly explore it again." },
+
+        { "day": 90, "channel": "email", "subject": "He was in your shoes 90 days ago", "body": "Hey NAME,\nMark was in the same spot. Busy, unsure, almost passed.\n90 days later he’s up $30k+ and said his only regret was not starting sooner.\nYou don’t need to decide anything now. But worth asking what changes if nothing changes.\nIf you want to explore, we can keep it simple.\nYOUR NAME" },
+        { "day": 90, "channel": "sms", "body": "NAME, Mark was in the same spot 90 days ago. Now he’s up $30k+ and said he waited too long. What changes if nothing changes?" },
+
+        { "day": 105, "channel": "email", "subject": "This strategy’s been hitting", "body": "Hey NAME,\nNo pitch. Just sharing something we tested that’s working surprisingly well.\nIf you’re still playing the long game, this might be one of those small moves that stack.\nWant the breakdown? Just say the word.\nYOUR NAME" },
+        { "day": 105, "channel": "sms", "body": "NAME, tested something simple that’s working well. Could be one of those small moves that stack. Want the quick breakdown?" },
+
+        { "day": 120, "channel": "email", "subject": "Can I be honest?", "body": "Hey NAME,\nIf this is no longer on your radar, totally fine.\nBut if it’s been sitting in the background and you’re looking for clarity, could be worth mapping out next steps.\nEither way, your call.\nYOUR NAME" },
+        { "day": 120, "channel": "sms", "body": "NAME, totally fine if this is off your radar. But if it’s been in the background, I’m here if you want clarity on next steps." },
+
+        { "day": 135, "channel": "email", "subject": "Saw this and thought of you", "body": "Hey NAME,\nCame across something today that felt really relevant to what you mentioned before.\nIf it sparks anything, happy to break it down together.\nEither way, hope it adds value.\nYOUR NAME" },
+        { "day": 135, "channel": "sms", "body": "Hey NAME, came across something that tied into what you mentioned. If it sparks something, let me know and I’ll unpack it with you." },
+
+        { "day": 150, "channel": "email", "subject": "Might be worth a glance", "body": "Hey NAME,\nWe’re rolling out something new this week that’s helping people move faster.\nIf the timing’s better and this is still important to you, it could be worth taking a quick look.\nJust keeping you in the loop.\nYOUR NAME" },
+        { "day": 150, "channel": "sms", "body": "Hey NAME, rolling something out that’s helping others move fast. If timing’s better now, might be worth a quick look." },
+
+        { "day": 165, "channel": "email", "subject": "What actually held you back?", "body": "Hey NAME,\nQuick question. What held you back last time?\n- Timing\n- Not sure it would work\n- Just not urgent\nNot trying to pitch. Just want to understand what landed and what didn’t so we can do better.\nAppreciate the honesty.\nYOUR NAME" },
+        { "day": 165, "channel": "sms", "body": "NAME, curious what actually held you back. Timing, doubt, or something else? No pitch. Just improving how we do this." },
+
+        { "day": 180, "channel": "email", "subject": "Wrapping this up", "body": "Hey NAME,\nI’m closing your file today just to keep the pipeline clean.\nIf this ever becomes relevant again, the door’s open.\nWishing you the best\nYOUR NAME" },
+        { "day": 180, "channel": "sms", "body": "Hey NAME, closing things out on my end today. If this becomes relevant again, the door’s open." }
+      ]
+    },
+
+    {
+      "id": "hot_list_sop_1",
+      "name": "Hot List SOP 1",
+      "useWhen": "Prospect showed high intent, had the budget or path to get it, verbalized the pain and desired outcome, objection was timing/logistics/\"need to think about it\", felt ready but didn't click go — and did NOT set a follow-up to reconnect.",
+      "goal": "Closing the deal within 7 days using a personalized and low-pressure approach built around the lead's reason for not committing.",
+      "notes": "Use SMS or Email — match whichever channel they respond to best (if they answered SMS before, use SMS). Mirror their words. Don't push, ask questions. Leave space for them to sell themselves. Add voice notes through SMS to get more emotional buy-in. Keep it YOU-driven, not product-driven.",
+      "messages": [
+        { "day": 0, "channel": "flexible", "body": "Hey NAME, I really appreciated our convo earlier. You're clearly serious about THE OUTCOME THEY HOPE FOR, and I can see you're right on the edge of making a big shift. Let me know if any questions came up since we spoke, I'm here for you.", "label": "Immediate Follow-Up (1 Hour After Call/Same Day)" },
+        { "day": 1, "channel": "flexible", "body": "Hey NAME, yesterday you mentioned you were tired of THEIR ROADBLOCK AND PAIN... and it’s clear you want change.\nWhat’s been sitting most in your mind since we spoke? Just curious, sometimes one conversation stirs up a lot.", "label": "Emotional Reminder + Reconnect" },
+        { "day": 2, "channel": "flexible", "body": "If you're like most of the people I talk to NAME, you’re probably weighing a couple things right now, timing, priorities, maybe even second-guessing a little.\nWould it make sense to map out a short next step just so this doesn’t get stuck in limbo again for another month?", "label": "Permission-Based Logic Follow-Up" },
+        { "day": 3, "channel": "flexible", "body": "Quick one, thought of you when I saw this result from CLIENT XYZ TESTIMONIAL (testimonial bank). Same hesitation, same place, and now they’ve managed to DO XYZ.\nIt reminded me of your situation.", "label": "Case Study or Result Reminder (Social Proof)" },
+        { "day": 5, "channel": "flexible", "body": "Hey NAME, can I ask something honestly?\nIf this doesn’t happen… if things stay how they are… what’s the real cost for you 30 days from now?\nYou don’t have to rush anything. Just want to help you get clarity, even if the answer is 'not now'.", "label": "Emotional Objection Reframe" },
+        { "day": 6, "channel": "flexible", "body": "Hey NAME, I’ve been thinking about our convo and how clear you were about wanting to fix THEIR PROBLEM.\nWhat usually stops people at this stage isn’t the offer, it’s the fear of making the wrong move. Totally get it.\nI know sometimes after a call, new thoughts or concerns can pop up once it all sinks in.\nCurious where your head’s at with everything now?", "label": "Final Touchpoint Before Trying To Close The Loop" },
+        { "day": 7, "channel": "flexible", "body": "Hey NAME, I’ve been thinking about what you shared on our call, and I know this was something you were seriously considering.\nWhere do you feel we should go from here?", "label": "Close Loop Gracefully Before Moving Them To \"Warm Lead\"" }
+      ]
+    },
+
+    {
+      "id": "hot_list_sop_2",
+      "name": "Hot List SOP 2",
+      "useWhen": "Prospect showed high intent, had the budget or path to get it, verbalized the pain and desired outcome, objection was timing/logistics/\"need to think about it\" — and you HAVE the next follow-up call booked in to reconnect about committing.",
+      "messages": [
+        { "day": 0, "channel": "flexible", "body": "Hey NAME, I really appreciated the convo, you brought real clarity to what’s been holding you back from THE GOAL. Most people never get that far.\nI’m glad we booked in time to finish mapping this out. If anything pops up between now and then, such as questions, second thoughts, or concerns, I’m here for you.", "label": "Right After the First Call (Lock in the frame)" },
+        { "day": 1, "channel": "flexible", "body": "Hey NAME, sometimes after a call like that, your mind starts spinning with all the things you want to fix, majority of people feel that way and it’s totally okay.\nI keep thinking about when you said, INSERT WHAT HAVE THEY MENTIONED ABOUT THE PROBLEM That hit.\nLooking forward to mapping out how to fix that when we talk again.", "label": "After First Call (Reinforce \"Why\")" },
+        { "day": 2, "channel": "flexible", "body": "Hey NAME, just checking in before tomorrow, I know it’s easy to overthink or second-guess stuff after a few days.\nIf anything’s come up or feels unclear since we spoke, bring it to the table, that’s what this next call is for. We’ll get 100% clarity together.\n\nBtw. this reminded me of your situation: XYZ TESTIMONIAL (testimonial bank)", "label": "24 Hours Before Follow-Up Call (Preempt Cold Feet)" }
+      ]
+    },
+
+    {
+      "id": "warm_list_sop",
+      "name": "Warm List SOP",
+      "useWhen": "They showed genuine interest but didn't commit on the spot — engaged, asked questions, saw the value (or didn't fully) — but have some internal or external block you weren't able to uncover.",
+      "goal": "Move them from \"close\" to \"closed\" using empathy, trust, and small nudges. Don't chase. Don't sell. Invite.",
+      "messages": [
+        { "day": 0, "variant": "1a_hot_to_warm_transition", "channel": "flexible", "body": "Hey NAME\nI noticed we didn’t get to wrap things up like we planned, no worries at all.\nThe timing might have gotten tricky or some other priorities came up. Totally normal.\nIf this is still something you’re thinking about, happy to pick it back up when the timing feels better.\nEither way, I’ve got your back.", "label": "1a. When you're moving a lead from HOT to WARM" },
+        { "day": 0, "variant": "1b_direct_entry", "channel": "flexible", "body": "Hey NAME, really enjoyed our convo, you’re clearly onto something with THE XYZ OUTCOME AND ROADBLOCK.\n\nTotally understand if you need time to sit with everything. I’m here if anything comes up or you want to map out next steps more clearly.", "label": "1b. Post-Call Follow-Up (No Pressure)" },
+        { "day": 3, "channel": "flexible", "body": "Since we spoke, have you thought more about what you shared around THEIR EMOTIONAL PAIN/REASON?\n\nI’ve just seen that when people start thinking in that direction, it usually means change is around the corner.", "label": "Re-Engagement (Emotional Driver)" },
+        { "day": 7, "channel": "flexible", "body": "This reminded me of you\nINSERT TESTIMONIAL (testimonial bank)\nSame situation, now thriving. Just thought you’d like to see this.", "label": "Value Message" },
+        { "day": 10, "channel": "flexible", "body": "One thing I didn’t mention on the call… most people in your spot actually think the issue is SURFACE-LEVEL PROBLEM, but it’s usually DEEPER PROBLEM..\n\nOnce we identify that, things move fast. If you're curious, I can walk you through it when you're ready.", "label": "Soft CTA" },
+        { "day": 14, "channel": "flexible", "body": "Hey NAME, has anything shifted on your end since we last connected? Timing, priorities, clarity?", "label": "Open Loop", "notes": "If you transitioned a lead from HOT to WARM, you can start sending emails below (per source doc — from this point on the sequence shifts to email)." },
+        { "day": "17-21", "channel": "flexible", "body": "Thought this might be useful based on our convo last week\nHELPFUL YOUTUBE VIDEO FROM YOU THAT APPLIES TO THEIR SITUATION (starting out, getting clients, positioning and etc.)\nJust something that came to mind based on what you said.", "label": "Value Message" },
+        { "day": 24, "channel": "flexible", "body": "Still circling the decision NAME? Totally normal.\n\nWhen you're ready, I’d be happy to help bring more clarity on what I would do in your situation. No trick, just want to see you succeed", "label": "Soft CTA" },
+        { "day": 30, "channel": "flexible", "body": "I’m here when you want to get unstuck and move forward.\nYou’ve got what it takes, I’ll be around if you ever need any help.", "label": "Last Nudge of the Month (Keep Door Open)" },
+        { "day": 38, "channel": "flexible", "body": "Hey NAME, seeing some shifts in the space lately, just curious if any of it’s been affecting your plans around THEIR GOAL?\n\nFigured I’d check in since you’re someone who’s thinking ahead.", "label": "Value Message" },
+        { "day": 48, "channel": "flexible", "body": "Been thinking about our convo from a few weeks back, interesting how the same problems tend to stick around unless something forces change.\n\nEver feel like that pattern's still playing out for you?", "label": "Pattern Interrupt or Voice Note" },
+        { "day": 60, "channel": "flexible", "body": "NAME, have you taken any steps on your side since we last spoke?\n\nI know you were serious about fixing THEIR ROADBLOCK AND ISSUE and wanted to see if you made any progress. Keeping fingers crossed from the sidelines :)", "label": "Re-Engagement" },
+        { "day": 70, "channel": "flexible", "body": "Thought you might enjoy this\nPDF, FREE RESOURCE, YOUTUBE VIDEO\nIt covers exactly what we talked about back then, good stuff.", "label": "Resource or Training Drop (Mini Value Bomb)" },
+        { "day": 80, "channel": "flexible", "body": "Quick thought NAME if nothing changes in the next 90 days, how do you see that playing out for you?\n\nSomething I ask myself sometimes when I feel stuck.", "label": "Self-Reflection" },
+        { "day": 90, "channel": "flexible", "body": "Just wanted to say I’ve really appreciated our convos over the last few months.\nWhenever the time feels right, I’d be happy to revisit things with fresh eyes. I’ll still be around if you ever want to reconnect.", "label": "Final Touchpoint in This Sequence (No Hard Close)" }
+      ]
+    },
+
+    {
+      "id": "general_list_sop",
+      "name": "General List SOP",
+      "useWhen": "They're curious but don't see the value (yet); their pain isn't strong enough to act on now; they're stuck in old thinking or externalizing their problem; not a hell no, but definitely not a hell yes. They say things like \"I'll revisit this next year,\" \"I just need to read more before I decide,\" \"Sounds cool, but I'm doing okay as I am,\" \"Maybe once I get through XYZ STAGE.\"",
+      "notes": "Monthly touchpoints (every 20–30 days). Avoid any CTA to book initially — focus on perspective-shifting, trust and nurturing. From here on (after Day 90), you can use the previous sequence (Warm List SOP).",
+      "messages": [
+        { "day": 0, "variant": "1b_exit_message", "channel": "flexible", "body": "Hey NAME, totally hear you on needing more time or space.\nYou’re on your own timeline, and when (or if) this ever feels like the right move, I’ll still be around.", "label": "1b. Exit Message After Disengagement or No Buy" },
+        { "day": 15, "channel": "flexible", "body": "I’ve noticed people often wait for things to feel perfect before moving… but most real progress starts with a little uncertainty.\nJust something I thought would be worth sharing.", "label": "Belief Reframe", "notes": "Start here if transitioning from Warm to General." },
+        { "day": 30, "channel": "flexible", "body": "A lot of people wait for things to feel perfect before moving.\nBut most progress starts with a little uncertainty.\nOur vissionaiers XYZ and XYZ made a video about it recently, want me to send it over?", "label": "Value + Permission to Re-engage" },
+        { "day": 45, "channel": "flexible", "body": "Ever notice how problems don’t usually explode… they just quietly stick around?\nMost of the time, people wait until the pain is loud enough, but by then, the cost is higher. If you want it, I have a short self-check tool to map out the cost of staying stuck, let me know if that’s something you’d wanna explore and I can send it", "label": "Silent Problem Spotlight" },
+        { "day": 60, "channel": "flexible", "body": "Hey NAME I recenrtly spoke with one of the students I helped join XYZ and he mentioned 'I didn’t think I was ready, but staying where I was started to feel worse.'\nWe started small, first 30 days focused only on WIN RELATED TO THE PROBLEM THAT THE PROSPECT HAS.\nIf you’re curious, I can show you how we structured it", "label": "Case Study" },
+        { "day": 75, "channel": "flexible", "body": "Quick reflection: if nothing changes in 90 days, what would that mean for you?\nI wanna see you succeed and if I can would love to give you some clarity regardless of you joining XYZ or not.", "label": "Soft Check-In" },
+        { "day": 90, "channel": "flexible", "body": "Hey NAME, it’s been about a few months since we first connected, funny how fast time moves.\nHas anything shifted in how you’re thinking about PAIN OR GOAL?", "label": "Optional Re-Entry Checkpoint" }
+      ]
+    },
+
+    {
+      "id": "reoffer_incognito",
+      "name": "Re-Offer (Incognito)",
+      "useWhen": "Send to the hottest leads only: people who had a sales call and didn't buy, or people who were very interested but never made it to a call.",
+      "timing": "Minimum 7 days after the last serious sales interaction. Sweet spot: around day 14. Latest while they're still \"hot\": within 30 days.",
+      "frequency": "Run 1–2 times per month as new hot leads age into that 7–30 day window.",
+      "how": "1:1 DMs, emails, or texts that use the script structure below. No big public announcement — under-the-radar personal outreach.",
+      "notes": "Public version (not included here): a full promo strategy targeted everywhere — FB/IG posts, daily CTAs/stories until the promo ends, blasted to all emails, can go to colder leads too. To avoid burning leads, run every 2–3 months. Keep the tone casual — don't make it sound copy-pasted or robotic; use your own language.",
+      "components": {
+        "openers": [
+          "Hey NAME, hope you’re having an amazing month so far in December!",
+          "NAME, you and CLOSER NAME had a chat XYZ ago and you were considering potentially working together more closely pretty soon to help you scale to 7fig/mo run rate.",
+          "Hey NAME! I'm launching a new offer at the beginning of Sumer and I thought I'd be making you a disservice if I didn't let you know that.."
+        ],
+        "bodyExamples": [
+          "Thought I’d reach out to you to let you know that we’ve just launched a new ”XYZ offer’ where we would help you with XYZ, - where we also have a 30 day money back guarantee",
+          "Just to go the extra mile for you.. I’d love to personally offer you (if you were to sign up this week..):\n- A personal 1-on-1 session with myself to get insights on what your path will look like prior to coming in and getting access to a private support medium from myself as well..\n- A personalized coaching session with my setter manager that’s responsible for over $12M in sales in the high ticket industry, where you guys would talk about the sales CRM, streamlining your appointment setting framework, creating a personalized process and daily workflow for you and your setter (for whenever you’re going to be bringing one onboard)\n- An overall 10% discount for the program."
+        ],
+        "ctas": [
+          "Let me know if you’d like me to share more details on it!",
+          "Let me know if you’re free for a call with me so we can get you to the next level!",
+          "Let me know your thoughts on that legend"
+        ]
+      },
+      "messages": [
+        {
+          "day": null,
+          "channel": "dm",
+          "label": "DRAFT (1:1 DM / text)",
+          "body": "NAME, you and my team had a chat not too long ago and you were considering potentially working together more closely to help you with scaling your business.\nI figured I’d be doing you a disservice if I didn’t let you know that we’re running a special deal right before the price increase on July 1st..\n\nIf you were to decide before the end of July that you’d want to move forward with us to help you scale your business to muli 6-7 even 8 figures.. we’re gonna throw in:\n\n- All of out successful AD copy and creatives with a success manager that’s gonna work with you 1:1 on minimizing the CPL\n\n- Audit call to review your sales/setting/ad departments in your business, spotting possible bottlenecks and providing you with a plan of action to fix those issues\n\n- And on top of all that.. you’ll be able to work with XYZ exclusively during the 4 week intensive where he’s gonna be building an agency from scratch to $100k/mo using the XYZ MODEL\n\nLet me know if you’re free for a call with my team so we can get you to the next level"
+        },
+        {
+          "day": null,
+          "channel": "email",
+          "label": "EMAIL DRAFT",
+          "subject": "[MISSING: subject line — none given in source]",
+          "body": "Hi NAME,\nI hope you're doing great! You and my team had a chat not too long ago about the exciting possibility of working together to scale your business. I didn't want to miss the chance to let you know about a special deal we're currently offering right before the price increase on July 1st…\nIf you decide to move forward with us by the end of this week, we’re ready to help you skyrocket your business to multi 6-7, even 8 figures. Here’s what’s on the table:\n\n- Proven AD Copy and Creatives: Access to our successful ad copy and creatives, along with a dedicated success manager to work with you 1:1 on slashing your CPL.\n- In-Depth Audit Call: We’ll review your sales, setting, and ad departments to spot potential bottlenecks and provide a detailed action plan to fix any issues.\n- And on top of all that.. you’ll be able to work with XYZ exclusively during the 4 week intensive where he’s gonna be building an agency from scratch to $100k/mo using the Build & Release Model\n\nThis is a one time only opportunity to work with XYZ in an intimate setting and level up your business quickly and efficiently. I believe this could be a game-changer for you. Let me know if you’re free for a call with my team so we can discuss this further and set you on the path to massive success."
+        },
+        {
+          "day": null,
+          "channel": "social",
+          "label": "ORGANIC DRAFT (public post)",
+          "body": "So.. I recently chatted with one of my clients and their team about scaling their business, and it got me thinking. We’re running this special deal right now, and it’s too good not to share.\nIf you’re ready to take your business to multi 6-7, even 8 figures by the end of this week, here’s what we’re offering:\n\n- Proven AD Copy and Creatives plus a dedicated success manager to help you crush your CPL\n- In-depth audit to review your sales, setting, and ad departments, spot bottlenecks, and give you an action plan to fix them\n- And on top of all that.. you’ll be able to work with Serge exclusively during the 4 week intensive where he’s gonna be building an agency from scratch to $100k/mo using the Build & Release Model\n\nThis is your chance to level up big time! Drop me a message or comment below if you’re interested, and let’s get you to the next level."
+        }
+      ]
+    }
+  ],
+
+  "postCallLoomSop": {
+    "steps": [
+      "Identify which post-call follow-up Loom is best for this call.",
+      "Click on the Loom and go to the Business and Fitness Loom workspace.",
+      "Duplicate the Loom.",
+      "Add an audio variable and change the name for the prospect.",
+      "Edit the Loom video title by the prospect's name and company name.",
+      "Add the link to book a follow-up call.",
+      "Add the link to the Stripe link for 3k.",
+      "Copy the Loom URL and send a message using the script to the prospect in Email, WhatsApp, and the social platform they were booked in (Instagram, Facebook, LinkedIn, etc.)."
+    ],
+    "loomTemplates": [
+      {
+        "id": "call_recap",
+        "name": "Call Recap (Offer + Pillars)",
+        "url": "https://www.loom.com/share/aa0094fb5d8946c19bdff5f3ee7393b6"
+      },
+      {
+        "id": "should_you_start",
+        "name": "Should You Start (Uncertainty, Time, Fear)",
+        "url": "https://www.loom.com/share/6135b1c9a2734835af8fb57725d90950"
+      },
+      {
+        "id": "timing_is_the_issue",
+        "name": "Timing Is the Issue",
+        "url": "https://www.loom.com/share/a7d6ff014c3d487997034d81b020cd33"
+      }
+    ],
+    "links": {
+      "bookFollowUpCall": "https://calendly.com/marko-leyvix/discovery-call",
+      "stripePayment3k": "https://buy.stripe.com/4gM5kD7UT5ZB4bscrTdIA0j"
+    }
+  }
+}
