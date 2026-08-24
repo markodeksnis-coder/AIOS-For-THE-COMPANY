@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { DebriefForm } from "@/components/crm/debrief-form";
-import { CALL_OUTCOME_LABELS } from "@/lib/crm";
+import { callOutcomeLabel } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export default async function DebriefPage({ params }: { params: Promise<{ callId
         </div>
         <h1 className="mt-1 text-xl font-extrabold tracking-tight">{call.lead.name}</h1>
         <p className="mt-1 text-[0.8rem] text-text-dim">
-          {call.scheduledAt} · {CALL_OUTCOME_LABELS[call.outcome as keyof typeof CALL_OUTCOME_LABELS] ?? call.outcome}
+          {call.scheduledAt} · {callOutcomeLabel(call.callStatus, call.result)}
         </p>
       </Card>
 

@@ -12,10 +12,14 @@ import {
   parseTags,
   tagColor,
   formatCET,
-  CALL_OUTCOME_LABELS,
-  OUTCOME_TO_STAGE,
+  toBerlinDatetimeLocal,
+  callOutcomeLabel,
+  CALL_STATUS_TO_STAGE,
+  CALL_RESULT_TO_STAGE,
   LEAD_STAGE_STYLE,
-  DEBRIEFABLE_OUTCOMES,
+  DEBRIEFABLE_CALL_STATUSES,
+  type CallStatus,
+  type CallResult,
 } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +38,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   if (!lead) notFound();
 
   const tags = parseTags(lead.tags);
-  const noShowCount = lead.calls.filter((c) => c.outcome === "no_show").length;
-  const pendingCall = lead.calls.find((c) => c.outcome === "completed") ?? null;
+  const noShowCount = lead.calls.filter((c) => c.callStatus === "no_show").length;
+  const pendingCall = lead.calls.find((c) => c.callStatus === "showed" && c.result === null) ?? null;
   const ev = lead.dealValue && lead.stageProbability ? Math.round(lead.dealValue * (lead.stageProbability / 100)) : null;
 
   const qualificationFields = [
@@ -165,7 +169,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             ) : (
               <div className="flex flex-col gap-2">
                 {lead.calls.map((c) => {
-                  const stage = OUTCOME_TO_STAGE[c.outcome as keyof typeof OUTCOME_TO_STAGE];
+                  const stage = c.result
+                    ? CALL_RESULT_TO_STAGE[c.result as CallResult]
+                    : CALL_STATUS_TO_STAGE[c.callStatus as CallStatus];
                   const style = stage ? LEAD_STAGE_STYLE[stage] : undefined;
                   return (
                     <div key={c.id} className="flex flex-wrap items-start gap-3 rounded-lg border border-border p-2.5">
@@ -196,9 +202,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                           color: style?.text ?? "var(--text-faint)",
                         }}
                       >
-                        {CALL_OUTCOME_LABELS[c.outcome as keyof typeof CALL_OUTCOME_LABELS] ?? c.outcome}
+                        {callOutcomeLabel(c.callStatus, c.result)}
                       </span>
-                      {DEBRIEFABLE_OUTCOMES.includes(c.outcome as never) && (
+                      {DEBRIEFABLE_CALL_STATUSES.includes(c.callStatus as never) && (
                         <Link
                           href={`/sales/crm/debriefs/${c.id}`}
                           className="shrink-0 text-[0.72rem] font-semibold text-accent-strong hover:underline"
@@ -217,7 +223,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             leadId={lead.id}
             pendingCall={
               pendingCall
-                ? { scheduledAt: pendingCall.scheduledAt, recordingLink: pendingCall.recordingLink, notes: pendingCall.notes }
+                ? {
+                    scheduledAt: toBerlinDatetimeLocal(pendingCall.startedAt ?? new Date(pendingCall.scheduledAt)),
+                    recordingLink: pendingCall.recordingLink,
+                    notes: pendingCall.notes,
+                  }
                 : null
             }
           />

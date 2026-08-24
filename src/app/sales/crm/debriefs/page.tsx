@@ -2,8 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import {
-  CALL_OUTCOME_LABELS,
-  DEBRIEFABLE_OUTCOMES,
+  callOutcomeLabel,
+  DEBRIEFABLE_CALL_STATUSES,
   CLOSER_STEPS,
   CLOSER_STEP_LABELS,
   ROOT_CAUSES,
@@ -17,12 +17,12 @@ export const dynamic = "force-dynamic";
 export default async function DebriefsPage() {
   const [needsDebrief, totalDebriefableCalls] = await Promise.all([
     db.salesCall.findMany({
-      where: { outcome: { in: [...DEBRIEFABLE_OUTCOMES] }, debrief: null },
+      where: { callStatus: { in: DEBRIEFABLE_CALL_STATUSES }, debrief: null },
       orderBy: { scheduledAt: "desc" },
       include: { lead: { select: { id: true, name: true } } },
       take: 30,
     }),
-    db.salesCall.count({ where: { outcome: { in: [...DEBRIEFABLE_OUTCOMES] } } }),
+    db.salesCall.count({ where: { callStatus: { in: DEBRIEFABLE_CALL_STATUSES } } }),
   ]);
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
@@ -138,9 +138,7 @@ export default async function DebriefsPage() {
               >
                 <span className="font-mono text-[0.72rem] text-text-faint">{c.scheduledAt}</span>
                 <span className="flex-1 truncate font-bold">{c.lead.name}</span>
-                <span className="font-mono text-[0.7rem] text-text-faint">
-                  {CALL_OUTCOME_LABELS[c.outcome as keyof typeof CALL_OUTCOME_LABELS] ?? c.outcome}
-                </span>
+                <span className="font-mono text-[0.7rem] text-text-faint">{callOutcomeLabel(c.callStatus, c.result)}</span>
               </Link>
             ))}
           </div>

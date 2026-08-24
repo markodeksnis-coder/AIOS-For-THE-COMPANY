@@ -58,59 +58,75 @@ export const LEAD_STAGE_STYLE: Record<LeadStage, { bar: string; wash: string; te
   closed_lost: { bar: "#F97316", wash: "rgba(249,115,22,0.12)", text: "#FB923C" },
 };
 
-// Call disposition — what actually happened on one logged call. Distinct
-// from Lead.stage: logging a disposition is what *drives* the lead's stage
-// forward (see OUTCOME_TO_STAGE below), it isn't the stage itself.
-// "completed" is system-only — set by the Fathom webhook the moment a
-// recording is ready, meaning "they showed up, disposition not logged yet".
-// A rep never picks it directly (see LOGGABLE_CALL_OUTCOMES); logging the
-// real disposition afterward finishes that same row instead of adding a
-// second one for the same call.
-export const CALL_OUTCOMES = [
-  "no_show",
-  "booked_2nd_call",
-  "pif",
-  "plan",
-  "no_money",
-  "not_a_fit",
-  "canceled",
-  "completed",
-] as const;
-export type CallOutcome = (typeof CALL_OUTCOMES)[number];
+// Call outcome is two separate axes, not one combined field:
+// - callStatus: what happened with the appointment itself (did they show up)
+// - result: the sales disposition — only meaningful once callStatus is
+//   "showed" (you can't have a result if they didn't show)
+// Logging either is what *drives* the lead's stage forward (see
+// CALL_STATUS_TO_STAGE / CALL_RESULT_TO_STAGE below), neither is the stage
+// itself. A call can sit at callStatus="showed" with result still null —
+// that's Fathom's "pending disposition" placeholder (or a rep logging
+// attendance before filling in what happened); logging the result
+// afterward finishes that same row instead of adding a second one.
 
-export const LOGGABLE_CALL_OUTCOMES = CALL_OUTCOMES.filter((o) => o !== "completed") as Exclude<
-  CallOutcome,
-  "completed"
->[];
+export const CALL_STATUSES = ["booked", "showed", "no_show", "cancelled", "rescheduled"] as const;
+export type CallStatus = (typeof CALL_STATUSES)[number];
 
-export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
+export const CALL_STATUS_LABELS: Record<CallStatus, string> = {
+  booked: "Booked",
+  showed: "Showed",
   no_show: "No-Show",
-  booked_2nd_call: "Booked 2nd Call",
-  pif: "Paid In Full",
-  plan: "Payment Plan",
-  no_money: "No Money (Lost)",
-  not_a_fit: "Not a Fit (Lost)",
-  canceled: "Canceled",
-  completed: "Completed (Pending Disposition)",
+  cancelled: "Cancelled",
+  rescheduled: "Rescheduled",
 };
 
-/** Logging a disposition moves the lead's stage — `null` means don't touch the stage (a cancellation tells us nothing new). */
-export const OUTCOME_TO_STAGE: Record<CallOutcome, LeadStage | null> = {
+export const CALL_RESULTS = ["closed_won", "closed_lost", "follow_up", "not_qualified"] as const;
+export type CallResult = (typeof CALL_RESULTS)[number];
+
+export const CALL_RESULT_LABELS: Record<CallResult, string> = {
+  closed_won: "Closed Won",
+  closed_lost: "Closed Lost",
+  follow_up: "Follow-up",
+  not_qualified: "Not Qualified",
+};
+
+/** Logging a call status moves the lead's stage — `null` means don't touch
+ *  the stage (a cancellation or reschedule tells us nothing new about where
+ *  the lead stands). Overridden by CALL_RESULT_TO_STAGE once a result is
+ *  logged, since the result is more specific. */
+export const CALL_STATUS_TO_STAGE: Record<CallStatus, LeadStage | null> = {
+  booked: "booked_unconfirmed",
+  showed: "showed",
   no_show: "no_show",
-  booked_2nd_call: "showed",
-  pif: "closed_won",
-  plan: "closed_won",
-  no_money: "closed_lost",
-  not_a_fit: "closed_lost",
-  canceled: null,
-  completed: "showed",
+  cancelled: null,
+  rescheduled: null,
+};
+
+export const CALL_RESULT_TO_STAGE: Record<CallResult, LeadStage> = {
+  closed_won: "closed_won",
+  closed_lost: "closed_lost",
+  follow_up: "showed",
+  not_qualified: "closed_lost",
 };
 
 /** Auto-derived loss reason when the rep didn't type one — editable, not enforced. */
-export const OUTCOME_LOSS_REASON: Partial<Record<CallOutcome, string>> = {
-  no_money: "Money",
-  not_a_fit: "Not a fit",
+export const RESULT_LOSS_REASON: Partial<Record<CallResult, string>> = {
+  not_qualified: "Not qualified",
 };
+
+/** A call is worth debriefing once it has actually happened — showed
+ *  (whatever the result) or no-show. A call that's only booked, cancelled,
+ *  or rescheduled hasn't happened yet, so there's nothing to reflect on. */
+export const DEBRIEFABLE_CALL_STATUSES: CallStatus[] = ["showed", "no_show"];
+
+/** One label for a call row: just the status, or "Status → Result" once a
+ *  result has been logged. */
+export function callOutcomeLabel(callStatus: string, result: string | null | undefined): string {
+  const statusLabel = CALL_STATUS_LABELS[callStatus as CallStatus] ?? callStatus;
+  if (!result) return statusLabel;
+  const resultLabel = CALL_RESULT_LABELS[result as CallResult] ?? result;
+  return `${statusLabel} → ${resultLabel}`;
+}
 
 // Post-call debrief vocabulary — the CLOSER framework step where the call
 // felt weakest, the real category behind the final objection, and the one
@@ -144,11 +160,6 @@ export const ROOT_CAUSE_LABELS: Record<RootCause, string> = {
   lead: "Lead issue — wrong person or bad fit",
 };
 
-/** A call is worth debriefing once it has a real disposition — a call still
- *  pending disposition (Fathom's "completed") or one that never happened
- *  (canceled) has nothing to reflect on yet. */
-export const DEBRIEFABLE_OUTCOMES = LOGGABLE_CALL_OUTCOMES.filter((o) => o !== "canceled");
-
 /** Formats a Date in Central European Time, regardless of server or viewer
  *  timezone — every lead's next-call time reads the same way everywhere.
  *  Uses ICU's own abbreviation so it reads CEST in summer, CET in winter. */
@@ -161,6 +172,23 @@ export function formatCET(date: Date): string {
     minute: "2-digit",
     timeZoneName: "short",
   }).format(date);
+}
+
+/** Formats a Date as a `datetime-local` input value (`YYYY-MM-DDTHH:mm`) in
+ *  Central European Time — so a "Date/time" field's default value reads
+ *  consistently with formatCET regardless of server or viewer timezone. */
+export function toBerlinDatetimeLocal(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
 export const initialsOf = (name: string) =>

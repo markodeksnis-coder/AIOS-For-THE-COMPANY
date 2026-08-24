@@ -191,14 +191,22 @@ model SalesCall {
   leadId        String
   lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   scheduledAt   String // ISO date (YYYY-MM-DD) the call was/is booked for
-  outcome       String   @default("no_show") // no_show | booked_2nd_call | pif | plan | no_money | not_a_fit | canceled | completed
   rep           String?
   recordingLink String?
-  planLength    String? // e.g. "6 months", only meaningful when outcome is "plan"
-  lossReason    String? // only meaningful when outcome is no_money/not_a_fit
-  cashCollected Float? // amount collected specifically on this call, if pif/plan
+  planLength    String? // e.g. "6 months", only meaningful when result is "closed_won" and it was a payment plan
+  lossReason    String? // only meaningful when result is closed_lost/not_qualified
+  cashCollected Float? // amount collected specifically on this call
   notes         String?
   createdAt     DateTime @default(now())
+
+  // Two separate axes, deliberately not one combined field: callStatus is
+  // what happened with the appointment itself (did they show up), result is
+  // the sales disposition — only meaningful once callStatus is "showed".
+  // A call can be callStatus="showed" with result still null (Fathom's
+  // "pending disposition" placeholder, or a rep logging attendance before
+  // filling in what happened) — see logSalesCall in lib/actions/leads.ts.
+  callStatus String  @default("booked") // booked | showed | no_show | cancelled | rescheduled
+  result     String? // closed_won | closed_lost | follow_up | not_qualified
 
   // Set when this row was created (or updated) by the Fathom webhook — lets
   // a retried webhook delivery update the same row instead of duplicating
@@ -216,13 +224,14 @@ model SalesCall {
   debrief CallDebrief?
 
   @@index([leadId])
-  @@index([outcome])
+  @@index([callStatus])
   @@index([scheduledAt])
 }
 
 // The post-call debrief — answers to the 13-question sheet run after every
-// sales call. One per SalesCall. The outcome itself (closed/no-show/etc.)
-// already lives on SalesCall — this is the "why", not the "what".
+// sales call. One per SalesCall. The callStatus/result themselves
+// (closed/no-show/etc.) already live on SalesCall — this is the "why", not
+// the "what".
 model CallDebrief {
   id          String    @id @default(cuid())
   salesCallId String    @unique

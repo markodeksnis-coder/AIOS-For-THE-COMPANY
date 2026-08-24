@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/field";
 import { LeadPicker, type PickedLead } from "@/components/crm/lead-picker";
 
-export function LogCallQuickSearch({ leads }: { leads: { id: string; name: string }[] }) {
+export function LogCallQuickSearch({
+  leads,
+  variant = "ghost",
+  dropUp,
+}: {
+  leads: { id: string; name: string }[];
+  variant?: "primary" | "ghost";
+  dropUp?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -16,11 +24,21 @@ export function LogCallQuickSearch({ leads }: { leads: { id: string; name: strin
 
   if (!open) {
     return (
-      <Button variant="ghost" onClick={() => setOpen(true)}>
+      <Button variant={variant} onClick={() => setOpen(true)}>
         Log a call
       </Button>
     );
   }
 
-  return <LeadPicker leads={leads} onSelect={go} placeholder="Which lead?" autoFocus onEscape={() => setOpen(false)} className="w-56" />;
+  return (
+    <LeadPicker
+      leads={leads}
+      onSelect={go}
+      placeholder="Which lead?"
+      autoFocus
+      onEscape={() => setOpen(false)}
+      className="w-56"
+      dropUp={dropUp}
+    />
+  );
 }

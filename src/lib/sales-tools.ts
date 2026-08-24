@@ -8,14 +8,18 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import {
   LEAD_STAGES,
-  LOGGABLE_CALL_OUTCOMES,
-  OUTCOME_TO_STAGE,
-  OUTCOME_LOSS_REASON,
+  CALL_STATUSES,
+  CALL_RESULTS,
+  CALL_STATUS_TO_STAGE,
+  CALL_RESULT_TO_STAGE,
+  RESULT_LOSS_REASON,
   STAGE_DEFAULT_PROBABILITY,
   CLOSER_STEPS,
   ROOT_CAUSES,
   OBJECTION_TYPES,
   type LeadStage,
+  type CallStatus,
+  type CallResult,
 } from "@/lib/crm";
 
 export const SALES_TOOLS: Anthropic.Tool[] = [
@@ -34,7 +38,7 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "get_lead",
     description:
-      "Get full detail on one lead: contact info, deal value, tags, notes, and its full call history — each call includes its outcome, notes, recording link, exact start time, transcript (when Fathom captured one), and its post-call debrief (if one was filled in). Use this to ground a follow-up or Loom script in what actually happened on a specific call.",
+      "Get full detail on one lead: contact info, deal value, tags, notes, and its full call history — each call includes its callStatus and result, notes, recording link, exact start time, transcript (when Fathom captured one), and its post-call debrief (if one was filled in). Use this to ground a follow-up or Loom script in what actually happened on a specific call.",
     input_schema: {
       type: "object",
       properties: { leadId: { type: "string" } },
@@ -44,21 +48,22 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "log_sales_call",
     description:
-      "Log what happened on a sales call. This moves the lead's stage automatically — no-show, booked_2nd_call moves it to 'showed', pif/plan close it won, no_money/not_a_fit close it lost.",
+      "Log a call — two separate things: callStatus (did they show up: booked/showed/no_show/cancelled/rescheduled) and, once callStatus is 'showed', an optional result (closed_won/closed_lost/follow_up/not_qualified). This moves the lead's stage automatically — result wins when set, otherwise callStatus does (showed -> 'showed', no_show -> 'no_show', booked/rescheduled -> 'booked_unconfirmed').",
     input_schema: {
       type: "object",
       properties: {
         leadId: { type: "string" },
-        scheduledAt: { type: "string", description: "ISO date, YYYY-MM-DD." },
-        outcome: { type: "string", enum: [...LOGGABLE_CALL_OUTCOMES] },
+        scheduledAt: { type: "string", description: "ISO datetime, e.g. 2026-08-24T15:00. Defaults to now if omitted." },
+        callStatus: { type: "string", enum: [...CALL_STATUSES] },
+        result: { type: "string", enum: [...CALL_RESULTS], description: "Only meaningful once callStatus is 'showed'." },
         rep: { type: "string" },
         recordingLink: { type: "string" },
-        planLength: { type: "string", description: "Only meaningful when outcome is 'plan', e.g. '6 months'." },
+        planLength: { type: "string", description: "Only meaningful when result is 'closed_won' and it was a payment plan, e.g. '6 months'." },
         cashCollected: { type: "number", description: "Optional amount collected on this call." },
-        lossReason: { type: "string", description: "Only meaningful when outcome is no_money/not_a_fit." },
+        lossReason: { type: "string", description: "Only meaningful when result is closed_lost/not_qualified." },
         notes: { type: "string" },
       },
-      required: ["leadId", "scheduledAt", "outcome"],
+      required: ["leadId", "callStatus"],
     },
   },
   {
@@ -166,11 +171,10 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
       }
       case "log_sales_call": {
         const leadId = str(input, "leadId");
-        const scheduledAt = str(input, "scheduledAt");
-        const outcome = str(input, "outcome");
-        if (!leadId || !scheduledAt || !outcome || !(LOGGABLE_CALL_OUTCOMES as readonly string[]).includes(outcome)) {
+        const callStatus = str(input, "callStatus");
+        if (!leadId || !callStatus || !(CALL_STATUSES as readonly string[]).includes(callStatus)) {
           return {
-            output: { error: "leadId, scheduledAt, and a valid outcome are required" },
+            output: { error: "leadId and a valid callStatus are required" },
             summary: null,
             isError: true,
           };
@@ -178,28 +182,43 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         const lead = await db.lead.findUnique({ where: { id: leadId } });
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
 
+        const scheduledAtRaw = str(input, "scheduledAt");
+        const occurredAt = scheduledAtRaw ? new Date(scheduledAtRaw) : new Date();
+        if (Number.isNaN(occurredAt.getTime())) {
+          return { output: { error: "scheduledAt is not a valid date/time" }, summary: null, isError: true };
+        }
+        const scheduledAt = occurredAt.toISOString().slice(0, 10);
+
+        const resultRaw = str(input, "result");
+        const result = resultRaw && (CALL_RESULTS as readonly string[]).includes(resultRaw) ? resultRaw : null;
+
         const rawCash = input.cashCollected;
         const cashCollected = typeof rawCash === "number" ? rawCash : null;
-        const lossReason = str(input, "lossReason") ?? OUTCOME_LOSS_REASON[outcome as never] ?? null;
+        const lossReason = str(input, "lossReason") ?? (result ? RESULT_LOSS_REASON[result as CallResult] : null) ?? null;
         const recordingLink = str(input, "recordingLink");
         const notes = str(input, "notes");
 
         await db.$transaction(async (tx) => {
-          // A Fathom recording may have already created a "completed,
-          // pending disposition" row for this lead's most recent call —
-          // finish that row instead of logging a second one for the same
-          // call (mirrors logSalesCall in lib/actions/leads.ts).
-          const pending = await tx.salesCall.findFirst({
-            where: { leadId, outcome: "completed" },
-            orderBy: { createdAt: "desc" },
-          });
+          // A Fathom recording may have already created a "showed, pending
+          // result" row for this lead's most recent call — finish that row
+          // instead of logging a second one for the same call (mirrors
+          // logSalesCall in lib/actions/leads.ts).
+          const pending =
+            callStatus === "showed" || callStatus === "no_show"
+              ? await tx.salesCall.findFirst({
+                  where: { leadId, callStatus: "showed", result: null },
+                  orderBy: { createdAt: "desc" },
+                })
+              : null;
 
           if (pending) {
             await tx.salesCall.update({
               where: { id: pending.id },
               data: {
                 scheduledAt,
-                outcome,
+                startedAt: occurredAt,
+                callStatus,
+                result,
                 rep: str(input, "rep"),
                 recordingLink: recordingLink ?? pending.recordingLink,
                 planLength: str(input, "planLength"),
@@ -213,7 +232,9 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
               data: {
                 leadId,
                 scheduledAt,
-                outcome,
+                startedAt: occurredAt,
+                callStatus,
+                result,
                 rep: str(input, "rep"),
                 recordingLink,
                 planLength: str(input, "planLength"),
@@ -223,26 +244,31 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
               },
             });
           }
-          const stage = OUTCOME_TO_STAGE[outcome as never];
+          const stage = result
+            ? CALL_RESULT_TO_STAGE[result as CallResult]
+            : CALL_STATUS_TO_STAGE[callStatus as CallStatus];
           const data: {
             stage?: string;
             stageProbability?: number;
             lossReason?: string | null;
             cashCollected?: { increment: number };
-          } = {};
+            nextCallAt: Date | null;
+          } = {
+            nextCallAt: callStatus === "booked" || callStatus === "rescheduled" ? occurredAt : null,
+          };
           if (stage) {
             data.stage = stage;
             data.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
           }
           if (stage === "closed_lost") data.lossReason = lossReason;
           if (cashCollected) data.cashCollected = { increment: cashCollected };
-          if (Object.keys(data).length) await tx.lead.update({ where: { id: leadId }, data });
+          await tx.lead.update({ where: { id: leadId }, data });
         });
 
         safeRevalidate("/sales/crm", `/sales/crm/${leadId}`, "/sales/crm/calls");
         return {
-          output: { leadId, outcome },
-          summary: `Logged a ${outcome} call for "${lead.name}"`,
+          output: { leadId, callStatus, result },
+          summary: `Logged a ${callStatus}${result ? ` (${result})` : ""} call for "${lead.name}"`,
           isError: false,
         };
       }
@@ -333,7 +359,8 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
             debriefs: debriefs.map((d) => ({
               leadName: d.salesCall.lead.name,
               callDate: d.salesCall.scheduledAt,
-              outcome: d.salesCall.outcome,
+              callStatus: d.salesCall.callStatus,
+              result: d.salesCall.result,
               weakestStep: d.weakestStep,
               rootCause: d.rootCause,
               objectionType: d.objectionType,
