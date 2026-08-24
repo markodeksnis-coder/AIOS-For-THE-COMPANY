@@ -11,9 +11,11 @@ import {
   LOGGABLE_CALL_OUTCOMES,
   OUTCOME_TO_STAGE,
   OUTCOME_LOSS_REASON,
+  STAGE_DEFAULT_PROBABILITY,
   CLOSER_STEPS,
   ROOT_CAUSES,
   OBJECTION_TYPES,
+  type LeadStage,
 } from "@/lib/crm";
 
 export const SALES_TOOLS: Anthropic.Tool[] = [
@@ -222,8 +224,16 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
             });
           }
           const stage = OUTCOME_TO_STAGE[outcome as never];
-          const data: { stage?: string; lossReason?: string | null; cashCollected?: { increment: number } } = {};
-          if (stage) data.stage = stage;
+          const data: {
+            stage?: string;
+            stageProbability?: number;
+            lossReason?: string | null;
+            cashCollected?: { increment: number };
+          } = {};
+          if (stage) {
+            data.stage = stage;
+            data.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
+          }
           if (stage === "closed_lost") data.lossReason = lossReason;
           if (cashCollected) data.cashCollected = { increment: cashCollected };
           if (Object.keys(data).length) await tx.lead.update({ where: { id: leadId }, data });
@@ -253,7 +263,10 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         }
         const lead = await db.lead.findUnique({ where: { id: leadId } });
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
-        await db.lead.update({ where: { id: leadId }, data: { stage } });
+        await db.lead.update({
+          where: { id: leadId },
+          data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] },
+        });
         safeRevalidate("/sales/crm", `/sales/crm/${leadId}`);
         return { output: { leadId, stage }, summary: `Moved "${lead.name}" to ${stage}`, isError: false };
       }

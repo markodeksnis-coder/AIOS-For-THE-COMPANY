@@ -8,6 +8,7 @@ import { Button, Label, TextInput, TextArea } from "@/components/ui/field";
 export function NewLeadForm() {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [hasFollowUp, setHasFollowUp] = useState(false);
 
   if (!open) {
     return (
@@ -52,29 +53,27 @@ export function NewLeadForm() {
             <TextInput name="funnel" placeholder="Q1 webinar…" />
           </div>
           <div>
-            <Label>Rep</Label>
-            <TextInput name="repName" placeholder="Who's working it" />
-          </div>
-          <div>
-            <Label>Product interest</Label>
-            <TextInput name="productInterest" placeholder="What they want" />
-          </div>
-          <div>
-            <Label>Target price</Label>
-            <TextInput name="targetPrice" type="number" min="0" step="0.01" />
-          </div>
-          <div>
             <Label>Deal value</Label>
-            <TextInput name="dealValue" type="number" min="0" step="0.01" placeholder="For EV ranking" />
+            <TextInput name="dealValue" type="number" min="0" step="0.01" defaultValue={3000} />
           </div>
-          <div>
-            <Label>Stage probability %</Label>
-            <TextInput name="stageProbability" type="number" min="0" max="100" placeholder="0-100" />
-          </div>
-          <div>
-            <Label>Next call</Label>
-            <TextInput name="nextCallAt" type="datetime-local" />
-          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-[0.8rem] font-semibold">
+            <input
+              type="checkbox"
+              checked={hasFollowUp}
+              onChange={(e) => setHasFollowUp(e.target.checked)}
+              className="h-4 w-4 accent-accent-strong"
+            />
+            Follow-up call booked?
+          </label>
+          {hasFollowUp && (
+            <div className="mt-2 max-w-xs">
+              <Label>When</Label>
+              <TextInput name="nextCallAt" type="datetime-local" required />
+            </div>
+          )}
         </div>
 
         <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-widest text-text-faint">
@@ -98,15 +97,7 @@ export function NewLeadForm() {
             <TextInput name="monthlyRevenue" type="number" min="0" step="0.01" />
           </div>
         </div>
-        <div>
-          <Label>Do they currently sell / run paid ads?</Label>
-          <TextInput name="sellsService" placeholder="Their answer…" />
-        </div>
 
-        <div>
-          <Label>Tags</Label>
-          <TextInput name="tags" placeholder="hot, b2b, high-ticket (comma-separated)" />
-        </div>
         <div>
           <Label>Notes</Label>
           <TextArea name="notes" rows={2} placeholder="Anything worth knowing before the call…" />

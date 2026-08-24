@@ -228,18 +228,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               timezone: lead.timezone,
               source: lead.source,
               funnel: lead.funnel,
-              productInterest: lead.productInterest,
-              targetPrice: lead.targetPrice,
-              repName: lead.repName,
-              tags: lead.tags,
               notes: lead.notes,
               dealValue: lead.dealValue,
-              stageProbability: lead.stageProbability,
               location: lead.location,
               instagramOrLinkedin: lead.instagramOrLinkedin,
               yearsRunningAgency: lead.yearsRunningAgency,
               monthlyRevenue: lead.monthlyRevenue,
-              sellsService: lead.sellsService,
               nextCallAt: lead.nextCallAt ? lead.nextCallAt.toISOString().slice(0, 16) : null,
             }}
           />

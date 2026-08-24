@@ -7,6 +7,7 @@ import {
   fetchCalendlyEventStartTime,
   type CalendlyInviteePayload,
 } from "@/lib/calendly";
+import { STAGE_DEFAULT_PROBABILITY } from "@/lib/crm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
   if (existing) {
     await db.lead.update({
       where: { id: existing.id },
-      data: { stage: "booked_unconfirmed", ...sharedData },
+      data: { stage: "booked_unconfirmed", stageProbability: STAGE_DEFAULT_PROBABILITY.booked_unconfirmed, ...sharedData },
     });
   } else {
     await db.lead.create({
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
         email,
         source,
         stage: "booked_unconfirmed",
+        stageProbability: STAGE_DEFAULT_PROBABILITY.booked_unconfirmed,
         ...sharedData,
       },
     });
