@@ -11,6 +11,7 @@ import {
   transcriptTextFrom,
   type FathomWebhookPayload,
 } from "@/lib/fathom";
+import { STAGE_DEFAULT_PROBABILITY } from "@/lib/crm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,7 +99,10 @@ export async function POST(request: NextRequest) {
     // never downgrade a lead a rep has already moved further (no-show,
     // closed) than that.
     if (OPEN_STAGES.has(lead.stage)) {
-      await tx.lead.update({ where: { id: lead.id }, data: { stage: "showed", nextCallAt: null } });
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: { stage: "showed", stageProbability: STAGE_DEFAULT_PROBABILITY.showed, nextCallAt: null },
+      });
     }
   });
 

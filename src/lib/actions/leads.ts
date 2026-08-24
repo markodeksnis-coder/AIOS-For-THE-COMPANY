@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { LEAD_STAGES, LOGGABLE_CALL_OUTCOMES, OUTCOME_TO_STAGE, OUTCOME_LOSS_REASON } from "@/lib/crm";
+import {
+  LEAD_STAGES,
+  LOGGABLE_CALL_OUTCOMES,
+  OUTCOME_TO_STAGE,
+  OUTCOME_LOSS_REASON,
+  STAGE_DEFAULT_PROBABILITY,
+  type LeadStage,
+} from "@/lib/crm";
 
 function str(formData: FormData, key: string): string | null {
   const v = formData.get(key);
@@ -17,15 +24,13 @@ function num(formData: FormData, key: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function parseTagsInput(raw: string | null): string {
-  if (!raw) return "[]";
-  const tags = raw
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  return JSON.stringify(tags);
-}
-
+// productInterest, targetPrice, repName, stageProbability, sellsService,
+// and tags are deliberately NOT read from the form here — they're either
+// redundant with dealValue's $3k default, auto-derived from the lead's
+// stage (stageProbability), or meant to arrive from the Calendly
+// questionnaire/booking history rather than be hand-typed (sellsService,
+// tags). Leaving them out of this shared parser means a plain "Save" on
+// the edit form never overwrites whatever those columns actually hold.
 function leadFieldsFromForm(formData: FormData) {
   const nextCallAtRaw = str(formData, "nextCallAt");
   return {
@@ -34,18 +39,12 @@ function leadFieldsFromForm(formData: FormData) {
     timezone: str(formData, "timezone"),
     source: str(formData, "source"),
     funnel: str(formData, "funnel"),
-    productInterest: str(formData, "productInterest"),
-    targetPrice: num(formData, "targetPrice"),
-    repName: str(formData, "repName"),
-    tags: parseTagsInput(str(formData, "tags")),
     notes: str(formData, "notes"),
     dealValue: num(formData, "dealValue"),
-    stageProbability: num(formData, "stageProbability"),
     location: str(formData, "location"),
     instagramOrLinkedin: str(formData, "instagramOrLinkedin"),
     yearsRunningAgency: num(formData, "yearsRunningAgency"),
     monthlyRevenue: num(formData, "monthlyRevenue"),
-    sellsService: str(formData, "sellsService"),
     nextCallAt: nextCallAtRaw ? new Date(nextCallAtRaw) : null,
   };
 }
@@ -53,9 +52,10 @@ function leadFieldsFromForm(formData: FormData) {
 export async function createLead(formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Name is required");
+  const stage = (str(formData, "stage") ?? "new_lead") as LeadStage;
 
   const lead = await db.lead.create({
-    data: { name, stage: str(formData, "stage") ?? "new_lead", ...leadFieldsFromForm(formData) },
+    data: { name, stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage], ...leadFieldsFromForm(formData) },
   });
 
   revalidatePath("/sales/crm");
@@ -74,14 +74,17 @@ export async function updateLead(id: string, formData: FormData) {
 
 export async function setLeadStage(id: string, stage: string) {
   if (!LEAD_STAGES.includes(stage as never)) throw new Error(`Invalid stage: ${stage}`);
-  await db.lead.update({ where: { id }, data: { stage } });
+  await db.lead.update({ where: { id }, data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] } });
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${id}`);
 }
 
 /** Marks a call confirmed ahead of time — a state change, not a call outcome. */
 export async function confirmLead(id: string) {
-  await db.lead.update({ where: { id }, data: { stage: "confirmed" } });
+  await db.lead.update({
+    where: { id },
+    data: { stage: "confirmed", stageProbability: STAGE_DEFAULT_PROBABILITY.confirmed },
+  });
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${id}`);
 }
@@ -90,7 +93,10 @@ export async function confirmLead(id: string) {
 export async function moveLead(movedId: string, stage: string, columnOrder: string[]) {
   if (!LEAD_STAGES.includes(stage as never)) throw new Error(`Invalid stage: ${stage}`);
   await db.$transaction([
-    db.lead.update({ where: { id: movedId }, data: { stage } }),
+    db.lead.update({
+      where: { id: movedId },
+      data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] },
+    }),
     ...columnOrder.map((id, index) => db.lead.update({ where: { id }, data: { order: index } })),
   ]);
   revalidatePath("/sales/crm");
@@ -155,8 +161,11 @@ export async function logSalesCall(leadId: string, formData: FormData) {
     }
 
     const stage = OUTCOME_TO_STAGE[outcome as never];
-    const data: { stage?: string; lossReason?: string | null; cashCollected?: { increment: number } } = {};
-    if (stage) data.stage = stage;
+    const data: { stage?: string; stageProbability?: number; lossReason?: string | null; cashCollected?: { increment: number } } = {};
+    if (stage) {
+      data.stage = stage;
+      data.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
+    }
     if (stage === "closed_lost") data.lossReason = lossReason;
     if (cashCollected) data.cashCollected = { increment: cashCollected };
     if (Object.keys(data).length) await tx.lead.update({ where: { id: leadId }, data });

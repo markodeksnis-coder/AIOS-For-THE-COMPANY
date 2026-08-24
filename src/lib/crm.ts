@@ -32,6 +32,22 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   closed_lost: "Closed Lost",
 };
 
+// Default win-probability by stage — auto-applied whenever a lead's stage
+// changes (booking, confirming, logging a call, dragging the board, a
+// Calendly/Fathom webhook), so the Expected Value ranking on the dashboard
+// works without ever asking a rep to type a probability by hand. Still a
+// plain number on the lead, not a formula, so a specific deal can still be
+// hand-adjusted later if it's genuinely more/less likely than the average.
+export const STAGE_DEFAULT_PROBABILITY: Record<LeadStage, number> = {
+  new_lead: 10,
+  booked_unconfirmed: 20,
+  confirmed: 35,
+  showed: 55,
+  no_show: 15,
+  closed_won: 100,
+  closed_lost: 0,
+};
+
 export const LEAD_STAGE_STYLE: Record<LeadStage, { bar: string; wash: string; text: string }> = {
   new_lead: { bar: "#64748B", wash: "rgba(100,116,139,0.12)", text: "#94A3B8" },
   booked_unconfirmed: { bar: "#3B82F6", wash: "rgba(59,130,246,0.12)", text: "#60A5FA" },

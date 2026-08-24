@@ -12,31 +12,18 @@ export type EditableLead = {
   timezone: string | null;
   source: string | null;
   funnel: string | null;
-  productInterest: string | null;
-  targetPrice: number | null;
-  repName: string | null;
-  tags: string;
   notes: string | null;
   dealValue: number | null;
-  stageProbability: number | null;
   location: string | null;
   instagramOrLinkedin: string | null;
   yearsRunningAgency: number | null;
   monthlyRevenue: number | null;
-  sellsService: string | null;
   nextCallAt: string | null; // ISO string, already trimmed to datetime-local format by the caller
 };
 
 export function LeadEditForm({ lead }: { lead: EditableLead }) {
   const [pending, setPending] = useState(false);
-  const tags = (() => {
-    try {
-      const parsed = JSON.parse(lead.tags);
-      return Array.isArray(parsed) ? parsed.join(", ") : "";
-    } catch {
-      return "";
-    }
-  })();
+  const [hasFollowUp, setHasFollowUp] = useState(Boolean(lead.nextCallAt));
 
   return (
     <div className="flex flex-col gap-3">
@@ -64,10 +51,25 @@ export function LeadEditForm({ lead }: { lead: EditableLead }) {
           <Label>Timezone</Label>
           <TextInput name="timezone" defaultValue={lead.timezone ?? ""} />
         </div>
+
         <div>
-          <Label>Next call</Label>
-          <TextInput name="nextCallAt" type="datetime-local" defaultValue={lead.nextCallAt ?? ""} />
+          <label className="flex items-center gap-2 text-[0.8rem] font-semibold">
+            <input
+              type="checkbox"
+              checked={hasFollowUp}
+              onChange={(e) => setHasFollowUp(e.target.checked)}
+              className="h-4 w-4 accent-accent-strong"
+            />
+            Follow-up call booked?
+          </label>
+          {hasFollowUp && (
+            <div className="mt-2">
+              <Label>When</Label>
+              <TextInput name="nextCallAt" type="datetime-local" defaultValue={lead.nextCallAt ?? ""} required />
+            </div>
+          )}
         </div>
+
         <div>
           <Label>Source</Label>
           <TextInput name="source" defaultValue={lead.source ?? ""} />
@@ -77,30 +79,8 @@ export function LeadEditForm({ lead }: { lead: EditableLead }) {
           <TextInput name="funnel" defaultValue={lead.funnel ?? ""} />
         </div>
         <div>
-          <Label>Rep</Label>
-          <TextInput name="repName" defaultValue={lead.repName ?? ""} />
-        </div>
-        <div>
-          <Label>Product interest</Label>
-          <TextInput name="productInterest" defaultValue={lead.productInterest ?? ""} />
-        </div>
-        <div>
-          <Label>Target price</Label>
-          <TextInput name="targetPrice" type="number" min="0" step="0.01" defaultValue={lead.targetPrice ?? ""} />
-        </div>
-        <div>
           <Label>Deal value</Label>
           <TextInput name="dealValue" type="number" min="0" step="0.01" defaultValue={lead.dealValue ?? ""} />
-        </div>
-        <div>
-          <Label>Stage probability %</Label>
-          <TextInput
-            name="stageProbability"
-            type="number"
-            min="0"
-            max="100"
-            defaultValue={lead.stageProbability ?? ""}
-          />
         </div>
 
         <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-widest text-text-faint">
@@ -128,15 +108,7 @@ export function LeadEditForm({ lead }: { lead: EditableLead }) {
           <Label>Monthly revenue</Label>
           <TextInput name="monthlyRevenue" type="number" min="0" step="0.01" defaultValue={lead.monthlyRevenue ?? ""} />
         </div>
-        <div>
-          <Label>Do they currently sell / run paid ads?</Label>
-          <TextInput name="sellsService" defaultValue={lead.sellsService ?? ""} />
-        </div>
 
-        <div>
-          <Label>Tags</Label>
-          <TextInput name="tags" defaultValue={tags} placeholder="comma-separated" />
-        </div>
         <div>
           <Label>Notes</Label>
           <TextArea name="notes" rows={3} defaultValue={lead.notes ?? ""} />
