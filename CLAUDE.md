@@ -66,6 +66,30 @@ Requires two repo secrets (Settings → Secrets and variables → Actions),
 same values as Vercel's Environment Variables: `DATABASE_URL`,
 `TURSO_AUTH_TOKEN`.
 
+## A hand-authored migration can pass locally and still fail against real Turso
+
+Local schema verification (`prisma migrate deploy` against `prisma/dev.db`,
+then `cp prisma/dev.db ./dev.db`) uses the local libsql file driver, which
+is not exactly as strict as Turso's real server. Observed once so far:
+`ALTER TABLE "X" ADD COLUMN "y" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP`
+applied cleanly locally, then failed on the real Turso database (via the
+GitHub Actions `build` check — see above) with `SQLite error: Cannot add
+a column with non-constant default`. This is real, documented SQLite
+behavior: `CURRENT_TIME`/`CURRENT_DATE`/`CURRENT_TIMESTAMP` (and any
+other non-literal expression) is a disallowed default specifically for
+`ALTER TABLE ... ADD COLUMN` on a `NOT NULL` column — even though the
+exact same default is fine in `CREATE TABLE`. The local driver just
+didn't enforce it.
+
+**Fix pattern for a new NOT NULL column with a backfill**: use a literal
+constant default (e.g. `DEFAULT '1970-01-01 00:00:00'` for a DATETIME,
+or any fixed literal) to satisfy `ADD COLUMN`'s constraint, then
+immediately follow with an `UPDATE` statement that overwrites every row
+with the real backfilled value. Never rely on the local build alone to
+validate a hand-authored migration against a NOT NULL column — the
+GitHub Actions `build` check running against the real database is still
+the only real signal, per the section above.
+
 ## GitHub secret gotcha: update a secret and it may corrupt silently
 
 Observed twice in this repo: using GitHub's **"Update"** flow on an
