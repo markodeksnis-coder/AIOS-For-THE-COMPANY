@@ -17,21 +17,16 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { NewLeadForm } from "@/components/crm/new-lead-form";
-import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET, parseTags, tagColor } from "@/lib/crm";
+import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
 import { moveLead } from "@/lib/actions/leads";
 
 export type LeadRow = {
   id: string;
   name: string;
-  source: string | null;
-  repName: string | null;
   stage: string;
-  tags: string;
   dealValue: number | null;
-  stageProbability: number | null;
-  cashCollected: number;
-  noShowCount: number;
   nextCallAt: string | null; // ISO string
+  stageChangedAt: string; // ISO string
 };
 
 export function CrmBoard({ leads }: { leads: LeadRow[] }) {
@@ -99,17 +94,23 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
           {LEAD_STAGES.map((stage) => {
             const style = LEAD_STAGE_STYLE[stage];
             const inColumn = columns[stage] ?? [];
+            const columnValue = inColumn.reduce((sum, l) => sum + (l.dealValue ?? 0), 0);
             return (
               <div key={stage} className="min-w-[200px]">
                 <div
-                  className="mb-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                  className="mb-2.5 flex flex-col gap-0.5 rounded-lg px-2.5 py-1.5"
                   style={{ backgroundColor: style.wash }}
                 >
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: style.bar }} />
-                  <h2 className="text-[0.72rem] font-bold leading-tight" style={{ color: style.text }}>
-                    {LEAD_STAGE_LABELS[stage]}
-                  </h2>
-                  <span className="ml-auto font-mono text-[0.65rem] text-text-faint">{inColumn.length}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: style.bar }} />
+                    <h2 className="text-[0.72rem] font-bold leading-tight" style={{ color: style.text }}>
+                      {LEAD_STAGE_LABELS[stage]}
+                    </h2>
+                    <span className="ml-auto font-mono text-[0.65rem] text-text-faint">{inColumn.length}</span>
+                  </div>
+                  <div className="pl-3.5 font-mono text-[0.68rem] font-bold" style={{ color: style.text }}>
+                    ${columnValue.toLocaleString()}
+                  </div>
                 </div>
                 <SortableContext items={inColumn.map((l) => l.id)} strategy={verticalListSortingStrategy}>
                   <DroppableColumn stage={stage} empty={inColumn.length === 0}>
@@ -132,10 +133,8 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
 }
 
 function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolean }) {
-  const tags = parseTags(lead.tags);
   const style = LEAD_STAGE_STYLE[lead.stage as keyof typeof LEAD_STAGE_STYLE];
-  const ev =
-    lead.dealValue && lead.stageProbability ? Math.round(lead.dealValue * (lead.stageProbability / 100)) : null;
+  const daysInStage = Math.max(0, Math.floor((Date.now() - new Date(lead.stageChangedAt).getTime()) / 86_400_000));
 
   return (
     <Card
@@ -146,40 +145,33 @@ function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolea
     >
       <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: style?.bar }} aria-hidden />
       <div className="pl-2">
-        <h3 className="mb-1.5 text-[0.82rem] font-bold leading-tight">{lead.name}</h3>
+        <h3 className="mb-1.5 truncate text-[0.82rem] font-bold leading-tight">{lead.name}</h3>
 
-        {tags.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1">
-            {tags.slice(0, 3).map((t) => (
-              <span
-                key={t}
-                className="rounded-full px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide"
-                style={{ backgroundColor: `${tagColor(t)}22`, color: tagColor(t) }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {lead.nextCallAt && (
-          <div className="mb-1.5 font-mono text-[0.62rem] font-bold text-accent-strong">
-            {formatCET(new Date(lead.nextCallAt))}
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[0.62rem] text-text-faint">
-          {lead.repName && <span className="truncate">{lead.repName}</span>}
-          {ev !== null && <span className="font-bold text-accent-strong">EV ${ev.toLocaleString()}</span>}
-          {lead.cashCollected > 0 && (
-            <span className="font-bold text-good">${lead.cashCollected.toLocaleString()}</span>
-          )}
-          {lead.noShowCount > 0 && (
-            <span className="font-bold text-critical">no-show ×{lead.noShowCount}</span>
-          )}
+        <div className="flex flex-col gap-1.5">
+          <CardField
+            label="Deal value"
+            value={lead.dealValue ? `$${lead.dealValue.toLocaleString()}` : "—"}
+            valueClassName="text-accent-strong"
+          />
+          <CardField label="In stage" value={`${daysInStage}d`} />
+          <CardField label="Next action" value={lead.nextCallAt ? formatCET(new Date(lead.nextCallAt)) : "—"} />
         </div>
       </div>
     </Card>
+  );
+}
+
+/** Label stacked above value, never side-by-side — a real next-action
+ *  timestamp ("24 Aug, 14:30 GMT+2") is too wide to sit next to its label
+ *  inside a ~190px kanban column without wrapping mid-word. */
+function CardField({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
+  return (
+    <div>
+      <div className="font-mono text-[0.58rem] uppercase tracking-wide text-text-faint">{label}</div>
+      <div className={`truncate font-mono text-[0.72rem] font-bold ${valueClassName ?? "text-foreground"}`}>
+        {value}
+      </div>
+    </div>
   );
 }
 

@@ -149,6 +149,10 @@ model Lead {
   targetPrice      Float?
   repName          String? // free text, mirrors Issue.assignee — not a hard FK
   stage            String   @default("new_lead")
+  // Set every time `stage` changes (drag on the board, a call disposition,
+  // a webhook) — never touched otherwise — so the pipeline can show how
+  // long a lead has actually sat in its current stage, not just its age.
+  stageChangedAt   DateTime @default(now())
   tags             String   @default("[]") // JSON string[] — avatar tags, behavior tags, reactivation tags, all freeform
   notes            String?
   dealValue        Float? // used for the Expected Value ranking: dealValue * stageProbability

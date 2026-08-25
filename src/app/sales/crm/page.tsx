@@ -5,13 +5,11 @@ import { CrmBoard, type LeadRow } from "@/components/crm/crm-board";
 import { IntegrationStatus } from "@/components/crm/integration-status";
 import { DashboardPeriodTabs, type PeriodMetrics } from "@/components/crm/dashboard-period-tabs";
 import { CallsCashChart } from "@/components/crm/calls-cash-chart";
-import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
+import { formatCET } from "@/lib/crm";
 
 const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-COMPANY/blob/main";
 
 export const dynamic = "force-dynamic";
-
-const OPEN_STAGES = new Set(["new_lead", "booked_unconfirmed", "confirmed", "showed"]);
 
 export default async function CrmPage() {
   const [leads, fathomCallCount, calendlyLeadCount] = await Promise.all([
@@ -101,12 +99,6 @@ export default async function CrmPage() {
   const callsBySource = leads.flatMap((l) => l.calls.map((c) => ({ key: l.source ?? "(no source)", ...c })));
   const callsByRep = allCalls.map((c) => ({ key: c.rep ?? "(unassigned)", ...c }));
 
-  const evLeads = leads
-    .filter((l) => OPEN_STAGES.has(l.stage) && l.dealValue && l.stageProbability)
-    .map((l) => ({ ...l, ev: Math.round((l.dealValue ?? 0) * ((l.stageProbability ?? 0) / 100)) }))
-    .sort((a, b) => b.ev - a.ev)
-    .slice(0, 5);
-
   const latestCall = (l: (typeof leads)[number]) => [...l.calls].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0];
   const todaysNoShows = leads.filter((l) => l.stage === "no_show" && latestCall(l)?.scheduledAt === todayStr);
   const weeksClosedLost = leads.filter(
@@ -126,15 +118,10 @@ export default async function CrmPage() {
   const leadRows: LeadRow[] = leads.map((l) => ({
     id: l.id,
     name: l.name,
-    source: l.source,
-    repName: l.repName,
     stage: l.stage,
-    tags: l.tags,
     dealValue: l.dealValue,
-    stageProbability: l.stageProbability,
-    cashCollected: l.cashCollected,
-    noShowCount: l.calls.filter((c) => c.callStatus === "no_show").length,
     nextCallAt: l.nextCallAt ? l.nextCallAt.toISOString() : null,
+    stageChangedAt: l.stageChangedAt.toISOString(),
   }));
 
   return (
@@ -171,6 +158,10 @@ export default async function CrmPage() {
         </div>
       </div>
 
+      <div className="mb-6">
+        <CrmBoard leads={leadRows} />
+      </div>
+
       <IntegrationStatus
         fathomConfigured={!!process.env.FATHOM_WEBHOOK_SIGNING_KEY}
         fathomCallCount={fathomCallCount}
@@ -199,47 +190,10 @@ export default async function CrmPage() {
         <QueueCard title="Fresh new leads" rows={freshLeads.map((l) => l.name)} empty="No new leads waiting." />
       </div>
 
-      <Card className="mb-6 overflow-x-auto p-4">
-        <h2 className="mb-3 text-[0.8rem] font-bold">Top 5 open deals by expected value</h2>
-        <p className="mb-3 text-[0.76rem] text-text-dim">Deal value × stage probability. Set both on a lead to rank it.</p>
-        {evLeads.length === 0 ? (
-          <p className="text-[0.8rem] text-text-faint">
-            No open leads have both a deal value and a stage probability set yet.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {evLeads.map((l, i) => (
-              <Link
-                key={l.id}
-                href={`/sales/crm/${l.id}`}
-                className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:border-accent hover:bg-surface-hover"
-              >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-wash font-mono text-[0.68rem] font-bold text-accent-strong">
-                  {i + 1}
-                </span>
-                <span className="flex-1 truncate text-[0.83rem] font-bold">{l.name}</span>
-                <span
-                  className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold"
-                  style={{
-                    backgroundColor: LEAD_STAGE_STYLE[l.stage as keyof typeof LEAD_STAGE_STYLE]?.wash,
-                    color: LEAD_STAGE_STYLE[l.stage as keyof typeof LEAD_STAGE_STYLE]?.text,
-                  }}
-                >
-                  {LEAD_STAGE_LABELS[l.stage as keyof typeof LEAD_STAGE_LABELS] ?? l.stage}
-                </span>
-                <span className="font-mono text-[0.78rem] font-bold text-accent-strong">${l.ev.toLocaleString()}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </Card>
-
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BreakdownTable title="Pipeline by source" rows={breakdownRows(callsBySource)} />
         <BreakdownTable title="By rep" rows={breakdownRows(callsByRep)} />
       </div>
-
-      <CrmBoard leads={leadRows} />
     </div>
   );
 }

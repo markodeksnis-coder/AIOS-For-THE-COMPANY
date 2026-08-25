@@ -79,7 +79,15 @@ export async function updateLead(id: string, formData: FormData) {
 
 export async function setLeadStage(id: string, stage: string) {
   if (!LEAD_STAGES.includes(stage as never)) throw new Error(`Invalid stage: ${stage}`);
-  await db.lead.update({ where: { id }, data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] } });
+  const current = await db.lead.findUnique({ where: { id }, select: { stage: true } });
+  await db.lead.update({
+    where: { id },
+    data: {
+      stage,
+      stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage],
+      ...(current?.stage !== stage ? { stageChangedAt: new Date() } : {}),
+    },
+  });
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${id}`);
 }
@@ -88,7 +96,7 @@ export async function setLeadStage(id: string, stage: string) {
 export async function confirmLead(id: string) {
   await db.lead.update({
     where: { id },
-    data: { stage: "confirmed", stageProbability: STAGE_DEFAULT_PROBABILITY.confirmed },
+    data: { stage: "confirmed", stageProbability: STAGE_DEFAULT_PROBABILITY.confirmed, stageChangedAt: new Date() },
   });
   revalidatePath("/sales/crm");
   revalidatePath(`/sales/crm/${id}`);
@@ -97,10 +105,17 @@ export async function confirmLead(id: string) {
 /** Persists a drag-and-drop move on the CRM board. */
 export async function moveLead(movedId: string, stage: string, columnOrder: string[]) {
   if (!LEAD_STAGES.includes(stage as never)) throw new Error(`Invalid stage: ${stage}`);
+  const current = await db.lead.findUnique({ where: { id: movedId }, select: { stage: true } });
   await db.$transaction([
     db.lead.update({
       where: { id: movedId },
-      data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] },
+      data: {
+        stage,
+        stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage],
+        // Reordering within the same column also calls moveLead — only a
+        // real cross-column move should reset the "days in stage" clock.
+        ...(current?.stage !== stage ? { stageChangedAt: new Date() } : {}),
+      },
     }),
     ...columnOrder.map((id, index) => db.lead.update({ where: { id }, data: { order: index } })),
   ]);
@@ -270,6 +285,7 @@ export async function logSalesCall(leadId: string, formData: FormData) {
     const data: {
       stage?: string;
       stageProbability?: number;
+      stageChangedAt?: Date;
       lossReason?: string | null;
       cashCollected?: { increment: number };
       nextCallAt: Date | null;
@@ -280,8 +296,10 @@ export async function logSalesCall(leadId: string, formData: FormData) {
       nextCallAt: callStatus === "booked" || callStatus === "rescheduled" ? occurredAt : null,
     };
     if (stage) {
+      const current = await tx.lead.findUnique({ where: { id: leadId }, select: { stage: true } });
       data.stage = stage;
       data.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
+      if (current?.stage !== stage) data.stageChangedAt = new Date();
     }
     if (stage === "closed_lost") data.lossReason = lossReason;
     if (cashCollected) data.cashCollected = { increment: cashCollected };
@@ -324,9 +342,14 @@ export async function updateSalesCall(callId: string, formData: FormData) {
       ? CALL_RESULT_TO_STAGE[result as CallResult]
       : CALL_STATUS_TO_STAGE[callStatus as CallStatus];
     if (stage) {
+      const current = await tx.lead.findUnique({ where: { id: call.leadId }, select: { stage: true } });
       await tx.lead.update({
         where: { id: call.leadId },
-        data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] },
+        data: {
+          stage,
+          stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage],
+          ...(current?.stage !== stage ? { stageChangedAt: new Date() } : {}),
+        },
       });
     }
   });

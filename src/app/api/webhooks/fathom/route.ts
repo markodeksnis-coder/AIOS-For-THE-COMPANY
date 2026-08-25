@@ -102,7 +102,12 @@ export async function POST(request: NextRequest) {
     if (OPEN_STAGES.has(lead.stage)) {
       await tx.lead.update({
         where: { id: lead.id },
-        data: { stage: "showed", stageProbability: STAGE_DEFAULT_PROBABILITY.showed, nextCallAt: null },
+        data: {
+          stage: "showed",
+          stageProbability: STAGE_DEFAULT_PROBABILITY.showed,
+          stageChangedAt: new Date(),
+          nextCallAt: null,
+        },
       });
     }
   });
