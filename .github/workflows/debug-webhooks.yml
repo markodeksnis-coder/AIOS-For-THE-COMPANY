@@ -1,0 +1,23 @@
+name: Debug webhooks
+
+# Manual, read-only diagnostic against the real production database — prints
+# recent Fathom/Calendly webhook activity so "why isn't this showing up" can
+# be answered from a log instead of guessing. Never runs automatically.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/debug-webhooks.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
