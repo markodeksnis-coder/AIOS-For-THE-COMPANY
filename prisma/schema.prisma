@@ -221,9 +221,12 @@ model SalesCall {
   // is the full call transcript (when Fathom's webhook is configured to
   // include it); startedAt is the exact start time, letting the Sales Coach
   // agent disambiguate same-day calls ("yesterday's 2pm call") since
-  // scheduledAt is date-only.
+  // scheduledAt is date-only. aiSummary is Fathom's own generated summary —
+  // kept separate from `notes` so a rep typing manual notes later never
+  // overwrites it.
   transcript String?
   startedAt  DateTime?
+  aiSummary  String?
 
   debrief CallDebrief?
 
@@ -275,4 +278,40 @@ model LeadDraft {
   createdAt DateTime @default(now())
 
   @@index([leadId])
+}
+
+// One row per inbound webhook delivery — Fathom today, Calendly reuses the
+// same log (see CRM Task 6). Lets the founder see delivery failures
+// without digging through Vercel logs, and gives the "fire a test event"
+// button something real to show the outcome of.
+model WebhookEvent {
+  id        String   @id @default(cuid())
+  source    String // "fathom" | "calendly"
+  eventType String? // the provider's own event/type field, when present
+  status    String // "processed" | "unmatched" | "ignored" | "invalid_signature" | "error"
+  message   String // short human-readable outcome, e.g. "Matched Jordan Blake by email" or the error text
+  isTest    Boolean  @default(false) // fired from "Fire test event", not a real delivery
+  createdAt DateTime @default(now())
+
+  @@index([source, createdAt])
+}
+
+// A webhook event that arrived with a verified signature but matched no
+// lead — held here instead of being silently dropped, so it can be
+// assigned to the right lead in one click from /sales/crm/unmatched.
+model UnmatchedCall {
+  id                String    @id @default(cuid())
+  source            String // "fathom" | "calendly"
+  fathomRecordingId String?   @unique
+  recordingLink     String?
+  aiSummary         String?
+  transcript        String?
+  scheduledAt       String? // ISO date (YYYY-MM-DD)
+  startedAt         DateTime?
+  attendeeEmail     String?
+  attendeeName      String?
+  attendeePhone     String?
+  createdAt         DateTime  @default(now())
+
+  @@index([source, createdAt])
 }

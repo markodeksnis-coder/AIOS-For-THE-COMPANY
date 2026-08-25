@@ -48,6 +48,13 @@ export const STAGE_DEFAULT_PROBABILITY: Record<LeadStage, number> = {
   closed_lost: 0,
 };
 
+/** Stages a lead can still be auto-advanced out of by a recording/booking
+ *  landing — a recording is proof of attendance, but should never
+ *  downgrade a lead a rep has already moved further (no-show, closed)
+ *  than that. Shared by the Fathom webhook and the unmatched-call
+ *  assignment action so both apply the same rule. */
+export const OPEN_STAGES = new Set(["new_lead", "booked_unconfirmed", "confirmed"]);
+
 export const LEAD_STAGE_STYLE: Record<LeadStage, { bar: string; wash: string; text: string }> = {
   new_lead: { bar: "#64748B", wash: "rgba(100,116,139,0.12)", text: "#94A3B8" },
   booked_unconfirmed: { bar: "#3B82F6", wash: "rgba(59,130,246,0.12)", text: "#60A5FA" },
