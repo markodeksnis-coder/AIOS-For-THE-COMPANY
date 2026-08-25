@@ -17,7 +17,7 @@ import {
 
 const LOST_RESULTS = new Set<CallResult>(["closed_lost", "not_qualified"]);
 
-type PendingCall = { scheduledAt: string; recordingLink: string | null; notes: string | null };
+type PendingCall = { scheduledAt: string; recordingLink: string | null; notes: string | null; aiSummary: string | null };
 
 export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCall?: PendingCall | null }) {
   const [pending, setPending] = useState(false);
@@ -30,10 +30,15 @@ export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCa
     <Card id="log-call" className="scroll-mt-6 p-4">
       <h2 className="mb-3 text-[0.8rem] font-bold">Log a call</h2>
       {pendingCall && (
-        <p className="mb-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2 text-[0.76rem] text-accent-strong">
-          Fathom recording ready — the link and notes below are pre-filled from it. Pick what actually happened
-          and submit to finish logging this call.
-        </p>
+        <div className="mb-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2 text-[0.76rem] text-accent-strong">
+          <p>Fathom recording ready — the link below is pre-filled from it. Pick what actually happened and submit to finish logging this call.</p>
+          {pendingCall.aiSummary && (
+            <p className="mt-1.5 italic text-accent-strong/90">
+              <span className="font-semibold not-italic">Fathom summary: </span>
+              {pendingCall.aiSummary}
+            </p>
+          )}
+        </div>
       )}
       <form
         action={async (formData) => {

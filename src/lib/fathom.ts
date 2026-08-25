@@ -48,7 +48,28 @@ export function verifyFathomSignature(
   });
 }
 
-export type FathomInvitee = { name?: string | null; email?: string | null; is_external?: boolean | null };
+/** The signing half of verifyFathomSignature — builds real, valid webhook
+ *  headers for a payload using the actual configured signing key. Used
+ *  only by the "Fire a test event" button, so that feature exercises the
+ *  exact same signature-verification code path a real Fathom delivery
+ *  would hit, not a mocked bypass. */
+export function signFathomPayload(
+  rawBody: string,
+  signingKey: string
+): { id: string; timestamp: string; signature: string } {
+  const id = `test_${Date.now()}`;
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const key = Buffer.from(signingKey.replace(/^whsec_/, ""), "base64");
+  const signature = createHmac("sha256", key).update(`${id}.${timestamp}.${rawBody}`).digest("base64");
+  return { id, timestamp, signature: `v1,${signature}` };
+}
+
+export type FathomInvitee = {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  is_external?: boolean | null;
+};
 
 type FathomTranscriptSegment = { speaker?: string | null; speaker_name?: string | null; text?: string | null };
 
@@ -87,24 +108,30 @@ export function summaryTextFrom(payload: FathomWebhookPayload): string | null {
   return s.markdown_formatted ?? s.text ?? null;
 }
 
-/** Every calendar invitee's email except whoever recorded the call (the
- *  rep) — one of these is the prospect. Original casing is preserved for
- *  the Lead.email lookup; only the recorded-by exclusion and de-dupe
- *  compare case-insensitively. */
-export function inviteeEmailsFrom(payload: FathomWebhookPayload): string[] {
+/** Every calendar invitee except whoever recorded the call (the rep) — one
+ *  of these is the prospect. Original casing/formatting is preserved for
+ *  the Lead lookups; only the recorded-by exclusion and de-dupe compare
+ *  case-insensitively. */
+export function inviteesFrom(payload: FathomWebhookPayload): FathomInvitee[] {
   const recordedByEmail = payload.recorded_by?.email?.trim().toLowerCase() ?? null;
   const invitees = Array.isArray(payload.calendar_invitees) ? payload.calendar_invitees : [];
   const seen = new Set<string>();
-  const emails: string[] = [];
+  const result: FathomInvitee[] = [];
   for (const invitee of invitees) {
-    const email = invitee?.email?.trim();
-    if (!email) continue;
-    const key = email.toLowerCase();
-    if (key === recordedByEmail || seen.has(key)) continue;
+    const email = invitee?.email?.trim() || null;
+    const key = email?.toLowerCase() ?? `name:${invitee?.name?.trim().toLowerCase() ?? ""}`;
+    if ((email && key === recordedByEmail) || seen.has(key)) continue;
     seen.add(key);
-    emails.push(email);
+    result.push(invitee);
   }
-  return emails;
+  return result;
+}
+
+/** Convenience wrapper over inviteesFrom for callers that only need emails. */
+export function inviteeEmailsFrom(payload: FathomWebhookPayload): string[] {
+  return inviteesFrom(payload)
+    .map((i) => i.email?.trim())
+    .filter((e): e is string => Boolean(e));
 }
 
 /** YYYY-MM-DD, matching SalesCall.scheduledAt's format. Falls back to today

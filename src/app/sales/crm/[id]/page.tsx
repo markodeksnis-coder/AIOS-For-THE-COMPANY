@@ -178,6 +178,12 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                       <span className="mt-0.5 font-mono text-[0.72rem] text-text-faint">{c.scheduledAt}</span>
                       <div className="min-w-0 flex-1">
                         {c.notes && <p className="text-[0.8rem] text-text-dim">{c.notes}</p>}
+                        {c.aiSummary && (
+                          <p className="text-[0.78rem] italic text-text-faint">
+                            <span className="font-semibold not-italic text-text-dim">Fathom summary: </span>
+                            {c.aiSummary}
+                          </p>
+                        )}
                         {c.recordingLink && (
                           <a
                             href={c.recordingLink}
@@ -227,6 +233,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                     scheduledAt: toBerlinDatetimeLocal(pendingCall.startedAt ?? new Date(pendingCall.scheduledAt)),
                     recordingLink: pendingCall.recordingLink,
                     notes: pendingCall.notes,
+                    aiSummary: pendingCall.aiSummary,
                   }
                 : null
             }

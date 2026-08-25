@@ -12,10 +12,11 @@ const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-
 export const dynamic = "force-dynamic";
 
 export default async function CrmPage() {
-  const [leads, fathomCallCount, calendlyLeadCount] = await Promise.all([
+  const [leads, fathomCallCount, calendlyLeadCount, unmatchedCount] = await Promise.all([
     db.lead.findMany({ orderBy: { order: "asc" }, include: { calls: true } }),
     db.salesCall.count({ where: { fathomRecordingId: { not: null } } }),
     db.lead.count({ where: { calendlyEventUri: { not: null } } }),
+    db.unmatchedCall.count(),
   ]);
 
   const allCalls = leads.flatMap((l) => l.calls);
@@ -154,6 +155,23 @@ export default async function CrmPage() {
             className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
           >
             All calls →
+          </Link>
+          <Link
+            href="/sales/crm/unmatched"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
+          >
+            Unmatched calls →
+            {unmatchedCount > 0 && (
+              <span className="rounded-full bg-critical px-1.5 py-0.5 font-mono text-[0.62rem] font-bold text-white">
+                {unmatchedCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/sales/crm/webhooks"
+            className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
+          >
+            Webhooks →
           </Link>
         </div>
       </div>
