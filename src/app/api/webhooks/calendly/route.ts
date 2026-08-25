@@ -79,7 +79,12 @@ export async function POST(request: NextRequest) {
   if (existing) {
     await db.lead.update({
       where: { id: existing.id },
-      data: { stage: "booked_unconfirmed", stageProbability: STAGE_DEFAULT_PROBABILITY.booked_unconfirmed, ...sharedData },
+      data: {
+        stage: "booked_unconfirmed",
+        stageProbability: STAGE_DEFAULT_PROBABILITY.booked_unconfirmed,
+        stageChangedAt: new Date(),
+        ...sharedData,
+      },
     });
   } else {
     await db.lead.create({

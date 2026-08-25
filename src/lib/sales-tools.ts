@@ -250,6 +250,7 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
           const data: {
             stage?: string;
             stageProbability?: number;
+            stageChangedAt?: Date;
             lossReason?: string | null;
             cashCollected?: { increment: number };
             nextCallAt: Date | null;
@@ -259,6 +260,7 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
           if (stage) {
             data.stage = stage;
             data.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
+            if (lead.stage !== stage) data.stageChangedAt = new Date();
           }
           if (stage === "closed_lost") data.lossReason = lossReason;
           if (cashCollected) data.cashCollected = { increment: cashCollected };
@@ -277,7 +279,7 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         if (!leadId) return { output: { error: "leadId is required" }, summary: null, isError: true };
         const lead = await db.lead.findUnique({ where: { id: leadId } });
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
-        await db.lead.update({ where: { id: leadId }, data: { stage: "confirmed" } });
+        await db.lead.update({ where: { id: leadId }, data: { stage: "confirmed", stageChangedAt: new Date() } });
         safeRevalidate("/sales/crm", `/sales/crm/${leadId}`);
         return { output: { leadId, stage: "confirmed" }, summary: `Confirmed "${lead.name}"'s call`, isError: false };
       }
@@ -291,7 +293,11 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
         await db.lead.update({
           where: { id: leadId },
-          data: { stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage] },
+          data: {
+            stage,
+            stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage],
+            ...(lead.stage !== stage ? { stageChangedAt: new Date() } : {}),
+          },
         });
         safeRevalidate("/sales/crm", `/sales/crm/${leadId}`);
         return { output: { leadId, stage }, summary: `Moved "${lead.name}" to ${stage}`, isError: false };
