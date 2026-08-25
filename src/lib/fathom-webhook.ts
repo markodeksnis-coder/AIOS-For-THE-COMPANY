@@ -117,12 +117,35 @@ export async function processFathomWebhook(
   // Idempotent: a retried delivery for the same recording updates the same
   // row instead of duplicating it.
   const existingCall = recordingId ? await db.salesCall.findUnique({ where: { fathomRecordingId: recordingId } }) : null;
+  // A Calendly booking may have already created a "booked" row for this
+  // lead's most recent call — finish that row instead of leaving it
+  // stranded and creating a second one for the same call.
+  const pendingBooking = !existingCall
+    ? await db.salesCall.findFirst({
+        where: { leadId: lead.id, callStatus: "booked", result: null },
+        orderBy: { createdAt: "desc" },
+      })
+    : null;
 
   await db.$transaction(async (tx) => {
     if (existingCall) {
       await tx.salesCall.update({
         where: { id: existingCall.id },
         data: { recordingLink: recordingUrl, aiSummary, scheduledAt, startedAt, transcript },
+      });
+    } else if (pendingBooking) {
+      await tx.salesCall.update({
+        where: { id: pendingBooking.id },
+        data: {
+          callStatus: "showed",
+          result: null,
+          recordingLink: recordingUrl,
+          aiSummary,
+          fathomRecordingId: recordingId,
+          scheduledAt,
+          startedAt,
+          transcript,
+        },
       });
     } else {
       await tx.salesCall.create({

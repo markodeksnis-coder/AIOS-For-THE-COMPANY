@@ -83,6 +83,7 @@ export function parseQualificationAnswers(qa: QA[]): ParsedQualification {
 export type CalendlyInviteePayload = {
   event: "invitee.created" | "invitee.canceled";
   payload: {
+    uri?: string | null; // this invitee record's own URI — the call-level idempotency key
     name?: string | null;
     email?: string | null;
     text_reminder_number?: string | null;
@@ -93,12 +94,23 @@ export type CalendlyInviteePayload = {
     // (sometimes nested as { uri }) — the actual start time has to be
     // fetched separately via the API, see fetchCalendlyEventStartTime.
     event?: string | { uri?: string } | null;
+    // Present on invitee.created only when this booking is a reschedule —
+    // the URI of the invitee record it replaces. Calendly has no separate
+    // "rescheduled" event type; a reschedule is delivered as a
+    // invitee.canceled (old) + invitee.created (new, carrying this field).
+    old_invitee?: string | { uri?: string } | null;
   };
 };
 
 export function eventUriFrom(payload: CalendlyInviteePayload["payload"]): string | null {
   if (typeof payload.event === "string") return payload.event;
   if (payload.event && typeof payload.event === "object") return payload.event.uri ?? null;
+  return null;
+}
+
+export function oldInviteeUriFrom(payload: CalendlyInviteePayload["payload"]): string | null {
+  if (typeof payload.old_invitee === "string") return payload.old_invitee;
+  if (payload.old_invitee && typeof payload.old_invitee === "object") return payload.old_invitee.uri ?? null;
   return null;
 }
 

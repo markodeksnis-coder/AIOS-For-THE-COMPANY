@@ -232,15 +232,16 @@ export async function logSalesCall(leadId: string, formData: FormData) {
 
   await db.$transaction(async (tx) => {
     // A Fathom recording may have already created a "showed, pending
-    // result" row for this lead's most recent call — finish that row
-    // instead of logging a second one for the same call. Only applies when
-    // this log entry is itself disposing of a call that happened (showed
-    // or no-show) — a fresh "booked"/"rescheduled" entry is a different,
-    // future call and always gets its own row.
+    // result" row, or a Calendly booking a "booked" row, for this lead's
+    // most recent call — finish that row instead of logging a second one
+    // for the same call. Only applies when this log entry is itself
+    // disposing of a call that happened (showed or no-show) — a fresh
+    // "booked"/"rescheduled" entry is a different, future call and always
+    // gets its own row.
     const pending =
       callStatus === "showed" || callStatus === "no_show"
         ? await tx.salesCall.findFirst({
-            where: { leadId, callStatus: "showed", result: null },
+            where: { leadId, callStatus: { in: ["showed", "booked"] }, result: null },
             orderBy: { createdAt: "desc" },
           })
         : null;
