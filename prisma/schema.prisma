@@ -217,6 +217,15 @@ model SalesCall {
   // it. Null for every call logged by hand.
   fathomRecordingId String? @unique
 
+  // Set when this row was created by the Calendly webhook — Calendly's own
+  // invitee URI for this specific booking instance. A reschedule delivers
+  // as invitee.canceled (old booking) + invitee.created (new booking, with
+  // the old invitee's URI attached) rather than its own event type — the
+  // webhook finds the row by this field and updates it in place with the
+  // new URI/time instead of creating a second row. Null for every call not
+  // sourced from Calendly.
+  calendlyInviteeUri String? @unique
+
   // Fathom-only enrichment — null for every call logged by hand. transcript
   // is the full call transcript (when Fathom's webhook is configured to
   // include it); startedAt is the exact start time, letting the Sales Coach

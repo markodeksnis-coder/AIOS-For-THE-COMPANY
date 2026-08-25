@@ -28,8 +28,8 @@ export default async function WebhooksPage() {
         </div>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Webhook log</h1>
         <p className="mt-1 max-w-[65ch] text-[0.88rem] text-text-dim">
-          The last 50 inbound webhook deliveries (Fathom, and Calendly once it&rsquo;s connected) with their
-          outcome — nothing is silently dropped, even a call that matched no lead.
+          The last 50 inbound webhook deliveries — Fathom and Calendly — with their outcome. Nothing is silently
+          dropped, even a call that matched no lead.
         </p>
         <Link href="/sales/crm" className="mt-2 inline-block text-[0.78rem] font-semibold text-accent-strong">
           ← Back to CRM
