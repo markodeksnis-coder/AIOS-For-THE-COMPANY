@@ -90,13 +90,13 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 gap-5 overflow-x-auto sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="flex gap-5 overflow-x-auto pb-2">
           {LEAD_STAGES.map((stage) => {
             const style = LEAD_STAGE_STYLE[stage];
             const inColumn = columns[stage] ?? [];
             const columnValue = inColumn.reduce((sum, l) => sum + (l.dealValue ?? 0), 0);
             return (
-              <div key={stage} className="min-w-[210px]">
+              <div key={stage} className="w-[200px] shrink-0">
                 <div className="mb-3 px-1">
                   <div className="flex items-center gap-1.5">
                     <span

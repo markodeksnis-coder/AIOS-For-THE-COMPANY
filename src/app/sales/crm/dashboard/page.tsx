@@ -135,30 +135,45 @@ export default async function DashboardPage() {
         setupDocsBaseUrl={SETUP_DOCS_BASE_URL}
       />
 
-      <div className="mb-6">
-        <DashboardPeriodTabs today={periodData.today} week={periodData.week} month={periodData.month} />
-      </div>
-
-      <div className="mb-6">
+      <Section title="Performance">
+        <div className="mb-5">
+          <DashboardPeriodTabs today={periodData.today} week={periodData.week} month={periodData.month} />
+        </div>
         <CallsCashChart points={chartPoints} />
-      </div>
+      </Section>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <QueueCard
-          title="Today's confirmed calls"
-          rows={todaysConfirmedCalls.map((l) => `${formatCET(l.nextCallAt as Date)} — ${l.name}`)}
-          empty="Nothing booked for today yet."
-        />
-        <QueueCard title="Today's no-shows" rows={todaysNoShows.map((l) => l.name)} empty="None today." />
-        <QueueCard title="This week's closed-lost" rows={weeksClosedLost.map((l) => l.name)} empty="None this week." />
-        <QueueCard title="Reactivation list" rows={reactivationLeads.map((l) => l.name)} empty="No leads tagged for reactivation." />
-        <QueueCard title="Fresh new leads" rows={freshLeads.map((l) => l.name)} empty="No new leads waiting." />
-      </div>
+      <Section title="Action queues">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <QueueCard
+            title="Today's confirmed calls"
+            rows={todaysConfirmedCalls.map((l) => `${formatCET(l.nextCallAt as Date)} — ${l.name}`)}
+            empty="Nothing booked for today yet."
+          />
+          <QueueCard title="Today's no-shows" rows={todaysNoShows.map((l) => l.name)} empty="None today." />
+          <QueueCard title="This week's closed-lost" rows={weeksClosedLost.map((l) => l.name)} empty="None this week." />
+          <QueueCard title="Reactivation list" rows={reactivationLeads.map((l) => l.name)} empty="No leads tagged for reactivation." />
+          <QueueCard title="Fresh new leads" rows={freshLeads.map((l) => l.name)} empty="No new leads waiting." />
+        </div>
+      </Section>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BreakdownTable title="Pipeline by source" rows={breakdownRows(callsBySource)} />
-        <BreakdownTable title="By rep" rows={breakdownRows(callsByRep)} />
-      </div>
+      <Section title="Breakdowns" last>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <BreakdownTable title="Pipeline by source" rows={breakdownRows(callsBySource)} />
+          <BreakdownTable title="By rep" rows={breakdownRows(callsByRep)} />
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+/** Labeled, visually separated block — the dashboard used to be one long
+ *  scroll of stat tiles, a chart, five queue cards, and two tables with no
+ *  grouping; this makes each concern its own clearly bounded section. */
+function Section({ title, last = false, children }: { title: string; last?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={last ? "" : "mb-8 border-b border-border pb-8"}>
+      <h2 className="mb-4 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">{title}</h2>
+      {children}
     </div>
   );
 }
