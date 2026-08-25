@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Phone, Eye, Trophy, DollarSign, type LucideIcon } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
-import { IconTile } from "@/components/icon-tile";
 import { CrmBoard, type LeadRow } from "@/components/crm/crm-board";
 import { IntegrationStatus } from "@/components/crm/integration-status";
+import { DashboardPeriodTabs, type PeriodMetrics } from "@/components/crm/dashboard-period-tabs";
+import { CallsCashChart } from "@/components/crm/calls-cash-chart";
 import { LEAD_STAGE_LABELS, LEAD_STAGE_STYLE, formatCET } from "@/lib/crm";
 
 const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-COMPANY/blob/main";
@@ -21,39 +21,82 @@ export default async function CrmPage() {
   ]);
 
   const allCalls = leads.flatMap((l) => l.calls);
-  const showed = allCalls.filter((c) => c.callStatus === "showed");
-  const noShows = allCalls.filter((c) => c.callStatus === "no_show");
-  const won = allCalls.filter((c) => c.result === "closed_won");
-  const attempted = showed.length + noShows.length; // excludes cancelled/rescheduled — never really attempted
-  const showRate = attempted > 0 ? Math.round((showed.length / attempted) * 100) : 0;
-  const closeRate = showed.length > 0 ? Math.round((won.length / showed.length) * 100) : 0;
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const cashSince = (since: Date) =>
-    allCalls.filter((c) => c.createdAt >= since).reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
-  const cashToday = cashSince(startOfToday);
-  const cashWeek = cashSince(startOfWeek);
-  const cashMonth = cashSince(startOfMonth);
-  const cashAllTime = allCalls.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
-  const revenuePerShow = showed.length > 0 ? Math.round(cashAllTime / showed.length) : 0;
-  const revenuePerBooked = attempted > 0 ? Math.round(cashAllTime / attempted) : 0;
 
-  const callsSince = (since: Date) => allCalls.filter((c) => c.createdAt >= since).length;
-  const callsToday = callsSince(startOfToday);
-  const callsWeek = callsSince(startOfWeek);
-  const callsMonth = callsSince(startOfMonth);
-  const oldestCallAt = allCalls.reduce<Date | null>(
-    (min, c) => (min === null || c.createdAt < min ? c.createdAt : min),
-    null
-  );
-  const daysTracked = oldestCallAt
-    ? Math.max(1, Math.ceil((now.getTime() - oldestCallAt.getTime()) / 86_400_000))
-    : 1;
-  const dailyAverage = Math.round((allCalls.length / daysTracked) * 10) / 10;
+  const dateStr = (d: Date) => d.toISOString().slice(0, 10);
+  const addDays = (d: Date, n: number) => {
+    const copy = new Date(d);
+    copy.setDate(copy.getDate() + n);
+    return copy;
+  };
+  // Calendar-aware "one month back" — clamps to the shorter month's last
+  // day (e.g. Mar 31 -> Feb 28) instead of overflowing into March.
+  const shiftMonth = (d: Date, delta: number) => {
+    const targetMonth = d.getMonth() + delta;
+    const daysInTargetMonth = new Date(d.getFullYear(), targetMonth + 1, 0).getDate();
+    return new Date(d.getFullYear(), targetMonth, Math.min(d.getDate(), daysInTargetMonth));
+  };
+
+  const todayStr = dateStr(now);
+  const weekAgoStr = dateStr(startOfWeek);
+
+  function periodMetrics(startStr: string, endStr: string): PeriodMetrics {
+    const inRange = allCalls.filter((c) => c.scheduledAt >= startStr && c.scheduledAt <= endStr);
+    const booked = inRange.length;
+    const conducted = inRange.filter((c) => c.callStatus === "showed").length;
+    const closedWon = inRange.filter((c) => c.result === "closed_won").length;
+    const cash = inRange.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
+    return {
+      booked,
+      conducted,
+      showRate: booked > 0 ? Math.round((conducted / booked) * 100) : 0,
+      closeRate: conducted > 0 ? Math.round((closedWon / conducted) * 100) : 0,
+      cash,
+    };
+  }
+
+  // Each tab compares against the immediately preceding period of the same
+  // length (yesterday; last week up to the same weekday; last month up to
+  // the same day-of-month) rather than the previous period in full —
+  // comparing a partial "this week so far" against a complete prior week
+  // would read as a manufactured drop every single day except Sunday.
+  const prevDay = addDays(startOfToday, -1);
+  const prevWeekStart = addDays(startOfWeek, -7);
+  const prevWeekEnd = addDays(now, -7);
+  const prevMonthStart = shiftMonth(startOfMonth, -1);
+  const prevMonthEnd = shiftMonth(now, -1);
+
+  const periodData = {
+    today: {
+      current: periodMetrics(todayStr, todayStr),
+      previous: periodMetrics(dateStr(prevDay), dateStr(prevDay)),
+    },
+    week: {
+      current: periodMetrics(weekAgoStr, todayStr),
+      previous: periodMetrics(dateStr(prevWeekStart), dateStr(prevWeekEnd)),
+    },
+    month: {
+      current: periodMetrics(dateStr(startOfMonth), todayStr),
+      previous: periodMetrics(dateStr(prevMonthStart), dateStr(prevMonthEnd)),
+    },
+  };
+
+  // One line chart, calls conducted + cash collected per day, last 30 days.
+  const CHART_DAYS = 30;
+  const chartPoints = Array.from({ length: CHART_DAYS }, (_, i) => {
+    const dStr = dateStr(addDays(startOfToday, i - (CHART_DAYS - 1)));
+    const dayCalls = allCalls.filter((c) => c.scheduledAt === dStr);
+    return {
+      date: dStr,
+      conducted: dayCalls.filter((c) => c.callStatus === "showed").length,
+      cash: dayCalls.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0),
+    };
+  });
 
   const callsBySource = leads.flatMap((l) => l.calls.map((c) => ({ key: l.source ?? "(no source)", ...c })));
   const callsByRep = allCalls.map((c) => ({ key: c.rep ?? "(unassigned)", ...c }));
@@ -64,8 +107,6 @@ export default async function CrmPage() {
     .sort((a, b) => b.ev - a.ev)
     .slice(0, 5);
 
-  const todayStr = now.toISOString().slice(0, 10);
-  const weekAgoStr = startOfWeek.toISOString().slice(0, 10);
   const latestCall = (l: (typeof leads)[number]) => [...l.calls].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0];
   const todaysNoShows = leads.filter((l) => l.stage === "no_show" && latestCall(l)?.scheduledAt === todayStr);
   const weeksClosedLost = leads.filter(
@@ -138,39 +179,12 @@ export default async function CrmPage() {
         setupDocsBaseUrl={SETUP_DOCS_BASE_URL}
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon={Phone} gradient="linear-gradient(135deg, #3B82F6, #14B8A6)" value={allCalls.length} label="Total calls" />
-        <StatTile icon={Eye} gradient="linear-gradient(135deg, #8B5CF6, #A78BFA)" value={`${showRate}%`} label="Show rate" />
-        <StatTile icon={Trophy} gradient="linear-gradient(135deg, #22C55E, #4ADE80)" value={`${closeRate}%`} label="Close rate" />
-        <StatTile
-          icon={DollarSign}
-          gradient="linear-gradient(135deg, #EAB308, #FACC15)"
-          value={`$${cashAllTime.toLocaleString()}`}
-          label="Cash collected (all-time)"
-        />
+      <div className="mb-6">
+        <DashboardPeriodTabs today={periodData.today} week={periodData.week} month={periodData.month} />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="p-4">
-          <h2 className="mb-3 text-[0.8rem] font-bold">Cash collected</h2>
-          <div className="grid grid-cols-3 gap-3">
-            <CashCell label="Today" value={cashToday} />
-            <CashCell label="This week" value={cashWeek} />
-            <CashCell label="This month" value={cashMonth} />
-            <CashCell label="Per show" value={revenuePerShow} />
-            <CashCell label="Per booked call" value={revenuePerBooked} />
-          </div>
-        </Card>
-        <Card className="p-4">
-          <h2 className="mb-3 text-[0.8rem] font-bold">Calls</h2>
-          <div className="grid grid-cols-3 gap-3">
-            <CountCell label="Today" value={callsToday} />
-            <CountCell label="This week" value={callsWeek} />
-            <CountCell label="This month" value={callsMonth} />
-            <CountCell label="Daily average" value={dailyAverage} />
-            <CountCell label="All-time" value={allCalls.length} />
-          </div>
-        </Card>
+      <div className="mb-6">
+        <CallsCashChart points={chartPoints} />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -226,44 +240,6 @@ export default async function CrmPage() {
       </div>
 
       <CrmBoard leads={leadRows} />
-    </div>
-  );
-}
-
-function StatTile({
-  icon,
-  gradient,
-  value,
-  label,
-}: {
-  icon: LucideIcon;
-  gradient: string;
-  value: string | number;
-  label: string;
-}) {
-  return (
-    <Card className="h-full p-4">
-      <IconTile icon={icon} gradient={gradient} size="sm" className="mb-2.5" />
-      <div className="font-mono text-2xl tabular-nums">{value}</div>
-      <div className="mt-0.5 text-[0.78rem] text-text-dim">{label}</div>
-    </Card>
-  );
-}
-
-function CashCell({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div className="font-mono text-lg font-bold tabular-nums text-good">${value.toLocaleString()}</div>
-      <div className="text-[0.7rem] text-text-faint">{label}</div>
-    </div>
-  );
-}
-
-function CountCell({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div className="font-mono text-lg font-bold tabular-nums">{value}</div>
-      <div className="text-[0.7rem] text-text-faint">{label}</div>
     </div>
   );
 }
