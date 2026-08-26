@@ -8,8 +8,8 @@ import { signFathomPayload } from "@/lib/fathom";
 // on the same spies as calls made directly on `db`.
 const dbMock = vi.hoisted(() => ({
   lead: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
-  salesCall: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
-  unmatchedCall: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
+  salesCall: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn(), upsert: vi.fn() },
+  unmatchedCall: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), upsert: vi.fn() },
   webhookEvent: { create: vi.fn() },
   $transaction: vi.fn(),
 }));
@@ -45,7 +45,9 @@ beforeEach(() => {
   dbMock.lead.findMany.mockResolvedValue([]);
   dbMock.salesCall.findUnique.mockResolvedValue(null);
   dbMock.salesCall.findFirst.mockResolvedValue(null);
+  dbMock.salesCall.upsert.mockResolvedValue({});
   dbMock.unmatchedCall.findUnique.mockResolvedValue(null);
+  dbMock.unmatchedCall.upsert.mockResolvedValue({});
 });
 
 describe("processFathomWebhook — signature/payload validation", () => {
@@ -88,13 +90,35 @@ describe("processFathomWebhook — matched lead", () => {
 
     expect(result.status).toBe(200);
     expect(result.body).toMatchObject({ matched: true, leadId: "lead1" });
-    expect(dbMock.salesCall.create).toHaveBeenCalledTimes(1);
-    expect(dbMock.salesCall.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ leadId: "lead1", callStatus: "showed", fathomRecordingId: "12345" }) })
+    // Goes through upsert (keyed on the unique fathomRecordingId), not a
+    // plain create — see the race-safety test below for why.
+    expect(dbMock.salesCall.create).not.toHaveBeenCalled();
+    expect(dbMock.salesCall.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { fathomRecordingId: "12345" },
+        create: expect.objectContaining({ leadId: "lead1", callStatus: "showed", fathomRecordingId: "12345" }),
+      })
     );
     expect(dbMock.lead.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "lead1" }, data: expect.objectContaining({ stage: "showed" }) })
     );
+  });
+
+  it("upserts instead of plain-creating the SalesCall, so a concurrent retry updates rather than crashing on the unique fathomRecordingId", async () => {
+    // Simulates the actual race: two near-simultaneous deliveries for the
+    // same recording both see existingCall/pendingBooking as null from
+    // their own reads (Fathom retries deliveries). A plain create() here
+    // would throw P2002 on the second delivery, surfacing as an unhandled
+    // 500 instead of the idempotent 200 the endpoint should return.
+    dbMock.lead.findFirst.mockImplementation(async ({ where }: { where: { email?: string } }) =>
+      where.email === "josh@example.com" ? { id: "lead1", name: "Josh Kennedy", stage: "booked" } : null
+    );
+    const raw = JSON.stringify(basePayload());
+    const result = await processFathomWebhook(raw, sign(raw));
+
+    expect(result.status).toBe(200);
+    expect(dbMock.salesCall.create).not.toHaveBeenCalled();
+    expect(dbMock.salesCall.upsert).toHaveBeenCalledTimes(1);
   });
 
   it("does not downgrade a lead already past 'booked' (e.g. closed_won)", async () => {
@@ -104,7 +128,7 @@ describe("processFathomWebhook — matched lead", () => {
     const raw = JSON.stringify(basePayload());
     await processFathomWebhook(raw, sign(raw));
 
-    expect(dbMock.salesCall.create).toHaveBeenCalledTimes(1);
+    expect(dbMock.salesCall.upsert).toHaveBeenCalledTimes(1);
     expect(dbMock.lead.update).not.toHaveBeenCalled();
   });
 
@@ -148,21 +172,36 @@ describe("processFathomWebhook — matched lead", () => {
 });
 
 describe("processFathomWebhook — no match", () => {
-  it("creates an UnmatchedCall when no lead matches", async () => {
+  it("upserts an UnmatchedCall when no lead matches, keyed on the recording id", async () => {
     const raw = JSON.stringify(basePayload());
     const result = await processFathomWebhook(raw, sign(raw));
 
     expect(result.status).toBe(200);
     expect(result.body).toMatchObject({ matched: false, unmatched: true });
-    expect(dbMock.unmatchedCall.create).toHaveBeenCalledTimes(1);
+    expect(dbMock.unmatchedCall.create).not.toHaveBeenCalled();
+    expect(dbMock.unmatchedCall.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { fathomRecordingId: "12345" } })
+    );
   });
 
-  it("updates the existing UnmatchedCall row on a retry instead of duplicating it", async () => {
-    dbMock.unmatchedCall.findUnique.mockResolvedValue({ id: "unmatched1", fathomRecordingId: "12345" });
+  it("upserts instead of plain-creating the UnmatchedCall, so a concurrent retry updates rather than crashing on the unique fathomRecordingId", async () => {
+    // Same race as the matched-lead path: two near-simultaneous unmatched
+    // deliveries for the same recording would both see no existing row and
+    // race to create() the same fathomRecordingId — upsert makes the loser
+    // update instead of crashing on a P2002.
     const raw = JSON.stringify(basePayload());
+    const result = await processFathomWebhook(raw, sign(raw));
+
+    expect(result.status).toBe(200);
+    expect(dbMock.unmatchedCall.create).not.toHaveBeenCalled();
+    expect(dbMock.unmatchedCall.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to a plain create when the payload has no recording id (nothing to key an upsert on)", async () => {
+    const raw = JSON.stringify(basePayload({ recording_id: null, url: null }));
     await processFathomWebhook(raw, sign(raw));
 
-    expect(dbMock.unmatchedCall.create).not.toHaveBeenCalled();
-    expect(dbMock.unmatchedCall.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "unmatched1" } }));
+    expect(dbMock.unmatchedCall.upsert).not.toHaveBeenCalled();
+    expect(dbMock.unmatchedCall.create).toHaveBeenCalledTimes(1);
   });
 });
