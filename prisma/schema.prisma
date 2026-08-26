@@ -180,10 +180,39 @@ model Lead {
   updatedAt        DateTime @updatedAt
   calls            SalesCall[]
   drafts           LeadDraft[]
+  followUpTouches  FollowUpTouch[]
 
   @@index([stage])
   @@index([source])
   @@index([calendlyEventUri])
+}
+
+// One planned-or-sent personalized follow-up (a Loom video emailed to a
+// lead) — deliberately one model covering both "still due" and "already
+// sent", the same two-state pattern SalesCall uses for booked/showed:
+// sentAt null = still on the queue (today's/tomorrow's actions), sentAt
+// set = logged history feeding the sent/reply/watch metrics. Everything
+// here is logged by hand (see the "Follow-ups" page) — there is no Gmail
+// or Loom API wired into this app to infer any of it automatically.
+model FollowUpTouch {
+  id            String    @id @default(cuid())
+  leadId        String
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  templateName  String // freeform, e.g. "No-show follow-up", "Cold outreach" — groups the per-template leaderboard
+  loomUrl       String?
+  dueAt         DateTime // when it should go out; also its "due" bucket for the today/tomorrow queue
+  sentAt        DateTime? // null = still queued/planned
+  repliedAt     DateTime? // null = no reply logged yet
+  watched       Boolean   @default(false) // marked by hand from Loom's own view dashboard
+  viewCount     Int?
+  bookedFromThis Boolean  @default(false) // this touch is what got the lead to book a call
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([dueAt])
+  @@index([sentAt])
 }
 
 // One logged call for a lead. A lead can have several over time (e.g. a

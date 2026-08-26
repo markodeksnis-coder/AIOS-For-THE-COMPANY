@@ -90,25 +90,30 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 gap-4 overflow-x-auto sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="flex gap-5 overflow-x-auto pb-2">
           {LEAD_STAGES.map((stage) => {
             const style = LEAD_STAGE_STYLE[stage];
             const inColumn = columns[stage] ?? [];
             const columnValue = inColumn.reduce((sum, l) => sum + (l.dealValue ?? 0), 0);
             return (
-              <div key={stage} className="min-w-[200px]">
-                <div
-                  className="mb-2.5 flex flex-col gap-0.5 rounded-lg px-2.5 py-1.5"
-                  style={{ backgroundColor: style.wash }}
-                >
+              <div key={stage} className="w-[200px] shrink-0">
+                <div className="mb-3 px-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: style.bar }} />
-                    <h2 className="text-[0.72rem] font-bold leading-tight" style={{ color: style.text }}>
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: style.bar, boxShadow: `0 0 9px -1px ${style.bar}` }}
+                    />
+                    <h2 className="text-[0.78rem] font-bold leading-tight text-foreground">
                       {LEAD_STAGE_LABELS[stage]}
                     </h2>
-                    <span className="ml-auto font-mono text-[0.65rem] text-text-faint">{inColumn.length}</span>
+                    <span className="ml-auto rounded-full bg-surface-2 px-1.5 py-[0.05rem] font-mono text-[0.62rem] font-bold text-text-faint">
+                      {inColumn.length}
+                    </span>
                   </div>
-                  <div className="pl-3.5 font-mono text-[0.68rem] font-bold" style={{ color: style.text }}>
+                  <div
+                    className="mt-1 pl-4 font-mono text-[0.7rem] font-bold"
+                    style={{ color: columnValue > 0 ? style.bar : "var(--text-faint)" }}
+                  >
                     ${columnValue.toLocaleString()}
                   </div>
                 </div>
@@ -118,7 +123,7 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
                       <SortableLeadCard key={l.id} lead={l} />
                     ))}
                     {inColumn.length === 0 && (
-                      <p className="px-2 py-3 text-center text-[0.72rem] text-text-faint">Drop here</p>
+                      <p className="px-2 py-4 text-center text-[0.72rem] text-text-faint">Drop leads here</p>
                     )}
                   </DroppableColumn>
                 </SortableContext>
@@ -139,19 +144,19 @@ function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolea
   return (
     <Card
       className={
-        "group relative overflow-hidden p-3 transition-all " +
-        (dragging ? "rotate-2 scale-105 shadow-2xl" : "hover:border-accent hover:-translate-y-0.5")
+        "group relative overflow-hidden p-3.5 shadow-sm transition-all " +
+        (dragging ? "rotate-2 scale-105 shadow-2xl" : "hover:-translate-y-0.5 hover:border-accent hover:shadow-md")
       }
     >
-      <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: style?.bar }} aria-hidden />
-      <div className="pl-2">
-        <h3 className="mb-1.5 truncate text-[0.82rem] font-bold leading-tight">{lead.name}</h3>
+      <span className="absolute inset-y-0 left-0 w-1 rounded-r-full" style={{ backgroundColor: style?.bar }} aria-hidden />
+      <div className="pl-2.5">
+        <h3 className="mb-2 truncate text-[0.84rem] font-bold leading-tight">{lead.name}</h3>
 
         <div className="flex flex-col gap-1.5">
           <CardField
             label="Deal value"
             value={lead.dealValue ? `$${lead.dealValue.toLocaleString()}` : "—"}
-            valueClassName="text-accent-strong"
+            valueColor={lead.dealValue ? style?.bar : undefined}
           />
           <CardField label="In stage" value={`${daysInStage}d`} />
           <CardField label="Next action" value={lead.nextCallAt ? formatCET(new Date(lead.nextCallAt)) : "—"} />
@@ -164,11 +169,11 @@ function LeadCard({ lead, dragging = false }: { lead: LeadRow; dragging?: boolea
 /** Label stacked above value, never side-by-side — a real next-action
  *  timestamp ("24 Aug, 14:30 GMT+2") is too wide to sit next to its label
  *  inside a ~190px kanban column without wrapping mid-word. */
-function CardField({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
+function CardField({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
     <div>
       <div className="font-mono text-[0.58rem] uppercase tracking-wide text-text-faint">{label}</div>
-      <div className={`truncate font-mono text-[0.72rem] font-bold ${valueClassName ?? "text-foreground"}`}>
+      <div className="truncate font-mono text-[0.72rem] font-bold" style={{ color: valueColor ?? "var(--foreground)" }}>
         {value}
       </div>
     </div>
@@ -200,7 +205,7 @@ function DroppableColumn({ stage, empty, children }: { stage: string; empty: boo
   return (
     <div
       ref={setNodeRef}
-      className="flex min-h-[60px] flex-col gap-2 rounded-xl border border-dashed p-1 transition-colors"
+      className="flex min-h-[64px] flex-col gap-2 rounded-2xl border border-dashed p-1.5 transition-colors"
       style={{ borderColor: isOver ? "var(--accent)" : empty ? "var(--border)" : "transparent" }}
     >
       {children}
