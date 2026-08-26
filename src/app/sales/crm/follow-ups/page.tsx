@@ -10,7 +10,13 @@ export const dynamic = "force-dynamic";
 
 export default async function FollowUpsPage() {
   const [touches, leads] = await Promise.all([
-    db.followUpTouch.findMany({ include: { lead: { select: { id: true, name: true } } }, orderBy: { dueAt: "asc" } }),
+    db.followUpTouch.findMany({
+      include: {
+        lead: { select: { id: true, name: true } },
+        drafts: { orderBy: { createdAt: "asc" }, select: { id: true, channel: true, content: true } },
+      },
+      orderBy: { dueAt: "asc" },
+    }),
     db.lead.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
@@ -134,8 +140,22 @@ export default async function FollowUpsPage() {
   );
 }
 
-function toQueued(t: { id: string; leadId: string; lead: { name: string }; templateName: string; dueAt: Date }): QueuedTouch {
-  return { id: t.id, leadId: t.leadId, leadName: t.lead.name, templateName: t.templateName, dueAt: t.dueAt.toISOString() };
+function toQueued(t: {
+  id: string;
+  leadId: string;
+  lead: { name: string };
+  templateName: string;
+  dueAt: Date;
+  drafts: { id: string; channel: string; content: string }[];
+}): QueuedTouch {
+  return {
+    id: t.id,
+    leadId: t.leadId,
+    leadName: t.lead.name,
+    templateName: t.templateName,
+    dueAt: t.dueAt.toISOString(),
+    drafts: t.drafts,
+  };
 }
 
 function LeaderboardTable({
