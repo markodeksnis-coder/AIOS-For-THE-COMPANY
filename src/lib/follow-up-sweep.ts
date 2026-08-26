@@ -44,6 +44,22 @@ async function findGapLeads(): Promise<GapLead[]> {
     .slice(0, MAX_LEADS_PER_SWEEP);
 }
 
+/** Best-effort cache revalidation — a mutation already succeeded in the
+ *  database by the time this runs, so a revalidation failure (e.g. this
+ *  call context doesn't support it) must never turn a successful sweep
+ *  into a reported failure. Same pattern as agent-tools.ts/sales-tools.ts,
+ *  more load-bearing here now that this also runs from the daily cron,
+ *  which reports whatever this function throws as the sweep's own failure. */
+function safeRevalidate(...paths: string[]) {
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch {
+      // ignore
+    }
+  }
+}
+
 export type LeadOutcome =
   | { leadId: string; leadName: string; kind: FollowUpDraftKind; ok: true; draftsCreated: number; reply: string }
   | { leadId: string; leadName: string; kind: FollowUpDraftKind; ok: false; error: string };
@@ -118,8 +134,7 @@ export async function runFollowUpSweep(): Promise<SweepOutcome> {
     },
   });
 
-  revalidatePath("/sales/crm/follow-ups");
-  for (const r of results) revalidatePath(`/sales/crm/${r.leadId}`);
+  safeRevalidate("/sales/crm/follow-ups", ...results.map((r) => `/sales/crm/${r.leadId}`));
 
   return { ran: true, swept: results.length, totalDraftsCreated, failed: failures.length, results };
 }
