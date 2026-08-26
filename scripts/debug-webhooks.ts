@@ -90,6 +90,23 @@ async function main() {
     );
   }
 
+  console.log("\n=== Active agents: last daily_digest run per agent ===");
+  const activeAgents = await client.execute(
+    `SELECT slug, title, department FROM BrainFile WHERE type = 'agent' AND status = 'active' ORDER BY department, title`
+  );
+  for (const a of activeAgents.rows) {
+    const last = await client.execute({
+      sql: `SELECT createdAt, actions FROM AgentActivity WHERE agentSlug = ? AND kind = 'daily_digest' ORDER BY createdAt DESC LIMIT 1`,
+      args: [a.slug as string],
+    });
+    if (last.rows.length === 0) {
+      console.log(`  [${a.department ?? "-"}] ${a.title} — never run`);
+    } else {
+      const actionCount = JSON.parse((last.rows[0].actions as string) ?? "[]").length;
+      console.log(`  [${a.department ?? "-"}] ${a.title} — last ran ${last.rows[0].createdAt} (${actionCount} action(s))`);
+    }
+  }
+
   console.log("\n=== Follow-up touches (full queue snapshot) ===");
   const touches = await client.execute(`
     SELECT ft.templateName, ft.dueAt, ft.sentAt, ft.repliedAt, ft.watched, ft.viewCount, ft.bookedFromThis,
