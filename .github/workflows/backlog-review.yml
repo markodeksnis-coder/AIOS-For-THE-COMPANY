@@ -1,0 +1,24 @@
+name: Backlog review
+
+# Manual, read-only diagnostic against the real production database — prints
+# every open Issue's full title + description, so a real backlog item can be
+# acted on with full context instead of a guess from the title alone. Never
+# runs automatically, never writes.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/backlog-review.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
