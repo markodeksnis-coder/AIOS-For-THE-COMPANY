@@ -80,12 +80,6 @@ export async function processFathomWebhook(
   const matched = await matchLead(invitees);
 
   if (!matched) {
-    // Idempotent for unmatched deliveries too — a retry for a recording
-    // that's still unmatched updates the same holding row.
-    const existingUnmatched = recordingId
-      ? await db.unmatchedCall.findUnique({ where: { fathomRecordingId: recordingId } })
-      : null;
-
     const unmatchedData = {
       recordingLink: recordingUrl,
       aiSummary,
@@ -97,8 +91,20 @@ export async function processFathomWebhook(
       attendeePhone: primary?.phone ?? null,
     };
 
-    if (existingUnmatched) {
-      await db.unmatchedCall.update({ where: { id: existingUnmatched.id }, data: unmatchedData });
+    // Idempotent for unmatched deliveries too — a retry for a recording
+    // that's still unmatched updates the same holding row. Fathom does
+    // retry deliveries, and two near-simultaneous ones for the same
+    // recording can both find no existing row and race to create() the
+    // same fathomRecordingId, which is @unique — upsert makes the loser
+    // of that race update the row the winner just created instead of
+    // crashing on a P2002 (same fix as the Calendly webhook's equivalent
+    // race — see calendly-webhook.ts's handleCreated).
+    if (recordingId) {
+      await db.unmatchedCall.upsert({
+        where: { fathomRecordingId: recordingId },
+        create: { source: "fathom", fathomRecordingId: recordingId, ...unmatchedData },
+        update: unmatchedData,
+      });
     } else {
       await db.unmatchedCall.create({ data: { source: "fathom", fathomRecordingId: recordingId, ...unmatchedData } });
     }
@@ -146,6 +152,27 @@ export async function processFathomWebhook(
           startedAt,
           transcript,
         },
+      });
+    } else if (recordingId) {
+      // Same race as the unmatched-call branch above: a retried delivery
+      // can land here a second time before the first has committed, both
+      // having read existingCall/pendingBooking as null — upsert on the
+      // unique fathomRecordingId makes the loser update instead of
+      // crashing on a P2002.
+      await tx.salesCall.upsert({
+        where: { fathomRecordingId: recordingId },
+        create: {
+          leadId: lead.id,
+          scheduledAt,
+          callStatus: "showed",
+          result: null,
+          recordingLink: recordingUrl,
+          aiSummary,
+          fathomRecordingId: recordingId,
+          startedAt,
+          transcript,
+        },
+        update: { recordingLink: recordingUrl, aiSummary, scheduledAt, startedAt, transcript },
       });
     } else {
       await tx.salesCall.create({
