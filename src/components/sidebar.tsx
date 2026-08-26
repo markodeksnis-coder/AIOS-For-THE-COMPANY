@@ -6,6 +6,8 @@ import {
   FolderKanban,
   BarChart3,
   Phone,
+  TrendingUp,
+  Send,
   FileText,
   Workflow,
   GraduationCap,
@@ -36,18 +38,26 @@ export async function Sidebar() {
         <span className="text-[0.9rem] font-extrabold tracking-tight">Company OS</span>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-        <div className="flex flex-col gap-0.5">
-          <Eyebrow>Work</Eyebrow>
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
+        <div
+          className="flex flex-col gap-0.5 rounded-lg py-1.5 pl-2 pr-1"
+          style={{ borderLeft: "2px solid var(--graph-people)", backgroundColor: "color-mix(in srgb, var(--graph-people) 6%, transparent)" }}
+        >
+          <Eyebrow accent="var(--graph-people)">Work</Eyebrow>
           <NavLink href="/inbox" icon={Inbox}>Inbox</NavLink>
           <NavLink href="/issues" icon={ListTodo}>Issues</NavLink>
           <NavLink href="/projects" icon={FolderKanban}>Projects</NavLink>
           <NavLink href="/scorecards" icon={BarChart3}>Scorecards</NavLink>
           <NavLink href="/sales/crm" icon={Phone}>Inside Sales CRM</NavLink>
+          <NavLink href="/sales/crm/dashboard" icon={TrendingUp}>Sales KPI</NavLink>
+          <NavLink href="/sales/crm/follow-ups" icon={Send}>Follow-ups</NavLink>
         </div>
 
-        <div className="flex flex-col gap-0.5">
-          <Eyebrow>Company</Eyebrow>
+        <div
+          className="flex flex-col gap-0.5 rounded-lg py-1.5 pl-2 pr-1"
+          style={{ borderLeft: "2px solid var(--graph-knowledge)", backgroundColor: "color-mix(in srgb, var(--graph-knowledge) 6%, transparent)" }}
+        >
+          <Eyebrow accent="var(--graph-knowledge)">Company</Eyebrow>
           <NavLink href="/docs" icon={FileText}>Docs</NavLink>
           <NavLink href="/systems" icon={Workflow}>Systems</NavLink>
           <NavLink href="/training" icon={GraduationCap}>Training</NavLink>
@@ -61,8 +71,11 @@ export async function Sidebar() {
           <DepartmentNav departments={rows} />
         </div>
 
-        <div className="flex flex-col gap-0.5">
-          <Eyebrow>The Brain</Eyebrow>
+        <div
+          className="flex flex-col gap-0.5 rounded-lg py-1.5 pl-2 pr-1"
+          style={{ borderLeft: "2px solid var(--graph-work)", backgroundColor: "color-mix(in srgb, var(--graph-work) 6%, transparent)" }}
+        >
+          <Eyebrow accent="var(--graph-work)">The Brain</Eyebrow>
           <NavLink href="/docs" icon={Search}>Search</NavLink>
           <NavLink href="/graph" icon={Share2}>Graph</NavLink>
         </div>

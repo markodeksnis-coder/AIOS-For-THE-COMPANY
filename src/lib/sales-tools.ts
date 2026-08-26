@@ -48,7 +48,7 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
   {
     name: "log_sales_call",
     description:
-      "Log a call — two separate things: callStatus (did they show up: booked/showed/no_show/cancelled/rescheduled) and, once callStatus is 'showed', an optional result (closed_won/closed_lost/follow_up/not_qualified). This moves the lead's stage automatically — result wins when set, otherwise callStatus does (showed -> 'showed', no_show -> 'no_show', booked/rescheduled -> 'booked_unconfirmed').",
+      "Log a call — two separate things: callStatus (did they show up: booked/showed/no_show/cancelled/rescheduled) and, once callStatus is 'showed', an optional result (closed_won/closed_lost/follow_up/not_qualified). This moves the lead's stage automatically — result wins when set, otherwise callStatus does (showed -> 'showed', no_show -> 'no_show', booked/rescheduled -> 'booked').",
     input_schema: {
       type: "object",
       properties: {
@@ -64,15 +64,6 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
         notes: { type: "string" },
       },
       required: ["leadId", "callStatus"],
-    },
-  },
-  {
-    name: "confirm_lead",
-    description: "Mark a lead's booked call as confirmed (they replied yes / clicked confirm) — a state change, not a call outcome.",
-    input_schema: {
-      type: "object",
-      properties: { leadId: { type: "string" } },
-      required: ["leadId"],
     },
   },
   {
@@ -274,15 +265,6 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
           summary: `Logged a ${callStatus}${result ? ` (${result})` : ""} call for "${lead.name}"`,
           isError: false,
         };
-      }
-      case "confirm_lead": {
-        const leadId = str(input, "leadId");
-        if (!leadId) return { output: { error: "leadId is required" }, summary: null, isError: true };
-        const lead = await db.lead.findUnique({ where: { id: leadId } });
-        if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
-        await db.lead.update({ where: { id: leadId }, data: { stage: "confirmed", stageChangedAt: new Date() } });
-        safeRevalidate("/sales/crm", `/sales/crm/${leadId}`);
-        return { output: { leadId, stage: "confirmed" }, summary: `Confirmed "${lead.name}"'s call`, isError: false };
       }
       case "update_lead_stage": {
         const leadId = str(input, "leadId");

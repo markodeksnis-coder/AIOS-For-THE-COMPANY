@@ -27,7 +27,8 @@ export function LogCallForm({ leadId, pendingCall }: { leadId: string; pendingCa
   const showsResult = callStatus === "showed";
 
   return (
-    <Card id="log-call" className="scroll-mt-6 p-4">
+    <Card id="log-call" className="relative scroll-mt-6 overflow-hidden p-4">
+      <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: "var(--graph-work)" }} aria-hidden />
       <h2 className="mb-3 text-[0.8rem] font-bold">Log a call</h2>
       {pendingCall && (
         <div className="mb-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2 text-[0.76rem] text-accent-strong">

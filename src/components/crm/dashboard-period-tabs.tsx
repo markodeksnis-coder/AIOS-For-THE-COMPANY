@@ -47,11 +47,43 @@ export function DashboardPeriodTabs({
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <MetricCard label="Calls booked" value={data.current.booked} prev={data.previous.booked} format="count" />
-        <MetricCard label="Calls conducted" value={data.current.conducted} prev={data.previous.conducted} format="count" />
-        <MetricCard label="Show rate" value={data.current.showRate} prev={data.previous.showRate} format="points" />
-        <MetricCard label="Close rate" value={data.current.closeRate} prev={data.previous.closeRate} format="points" />
-        <MetricCard label="Cash collected" value={data.current.cash} prev={data.previous.cash} format="cash" />
+        <MetricCard
+          label="Calls booked"
+          value={data.current.booked}
+          prev={data.previous.booked}
+          format="count"
+          color="var(--graph-people)"
+        />
+        <MetricCard
+          label="Calls conducted"
+          value={data.current.conducted}
+          prev={data.previous.conducted}
+          format="count"
+          color="var(--graph-knowledge)"
+        />
+        <MetricCard
+          label="Show rate"
+          value={data.current.showRate}
+          prev={data.previous.showRate}
+          format="points"
+          color="var(--graph-work)"
+          gauge
+        />
+        <MetricCard
+          label="Close rate"
+          value={data.current.closeRate}
+          prev={data.previous.closeRate}
+          format="points"
+          color="var(--good)"
+          gauge
+        />
+        <MetricCard
+          label="Cash collected"
+          value={data.current.cash}
+          prev={data.previous.cash}
+          format="cash"
+          color="var(--accent-strong)"
+        />
       </div>
     </div>
   );
@@ -62,22 +94,65 @@ function MetricCard({
   value,
   prev,
   format,
+  color,
+  gauge = false,
 }: {
   label: string;
   value: number;
   prev: number;
   format: "count" | "points" | "cash";
+  color: string;
+  gauge?: boolean;
 }) {
   const displayValue =
     format === "cash" ? `$${value.toLocaleString()}` : format === "points" ? `${value}%` : value.toLocaleString();
   const delta = deltaFor(value, prev, format);
 
   return (
-    <Card className="p-4">
-      <div className="text-[0.7rem] text-text-faint">{label}</div>
-      <div className="mt-1 font-mono text-xl font-bold tabular-nums">{displayValue}</div>
-      <div className={`mt-1 text-[0.72rem] font-semibold ${delta.colorClass}`}>{delta.label}</div>
+    <Card
+      className="relative overflow-hidden p-4"
+      style={{ backgroundColor: `color-mix(in srgb, ${color} 5%, transparent)` }}
+    >
+      <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} aria-hidden />
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-[0.7rem] text-text-faint">{label}</div>
+          <div className="mt-1 font-mono text-xl font-bold tabular-nums" style={{ color }}>
+            {displayValue}
+          </div>
+          <div className={`mt-1 text-[0.72rem] font-semibold ${delta.colorClass}`}>{delta.label}</div>
+        </div>
+        {gauge && <RadialGauge value={value} color={color} />}
+      </div>
     </Card>
+  );
+}
+
+/** Small ring gauge for the two rate metrics — a percentage reads faster as
+ *  a filled arc than as a fifth number sitting next to four others. */
+function RadialGauge({ value, color }: { value: number; color: string }) {
+  const size = 40;
+  const stroke = 4;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, value));
+  const offset = c - (clamped / 100) * c;
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0 -rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+      />
+    </svg>
   );
 }
 

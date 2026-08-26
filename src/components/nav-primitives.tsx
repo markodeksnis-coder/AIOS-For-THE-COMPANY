@@ -41,9 +41,18 @@ export function DisabledNavItem({
   );
 }
 
-export function Eyebrow({ children }: { children: React.ReactNode }) {
+/** `accent`, when passed, tints the label and adds a small dot — the
+ *  sidebar's way of giving each nav group (Work/Company/The Brain) its
+ *  own identity so groups read as distinct sections, not one undifferentiated
+ *  list. Omit it for a group that doesn't need its own color (Departments
+ *  already carries per-department color on each row). */
+export function Eyebrow({ children, accent }: { children: React.ReactNode; accent?: string }) {
   return (
-    <div className="px-2 pb-1 font-mono text-[0.6875rem] uppercase tracking-widest text-text-faint">
+    <div
+      className="flex items-center gap-1.5 px-2 pb-1 font-mono text-[0.6875rem] uppercase tracking-widest"
+      style={{ color: accent ?? "var(--text-faint)" }}
+    >
+      {accent && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />}
       {children}
     </div>
   );

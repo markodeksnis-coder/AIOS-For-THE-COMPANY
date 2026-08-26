@@ -124,8 +124,8 @@ async function handleCreated(payload: CalendlyInviteePayload["payload"], eventTy
     ? await db.lead.update({
         where: { id: existingLead.id },
         data: {
-          stage: "booked_unconfirmed",
-          stageProbability: STAGE_DEFAULT_PROBABILITY.booked_unconfirmed,
+          stage: "booked",
+          stageProbability: STAGE_DEFAULT_PROBABILITY.booked,
           stageChangedAt: new Date(),
           ...sharedLeadData,
         },
@@ -135,8 +135,8 @@ async function handleCreated(payload: CalendlyInviteePayload["payload"], eventTy
           name: payload.name?.trim() || email,
           email,
           source,
-          stage: "booked_unconfirmed",
-          stageProbability: STAGE_DEFAULT_PROBABILITY.booked_unconfirmed,
+          stage: "booked",
+          stageProbability: STAGE_DEFAULT_PROBABILITY.booked,
           ...sharedLeadData,
         },
       });

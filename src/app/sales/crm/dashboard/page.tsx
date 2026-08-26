@@ -107,7 +107,10 @@ export default async function DashboardPage() {
     const tags = safeTags(l.tags);
     return tags.some((t) => /react|old lead/i.test(t));
   });
-  const freshLeads = [...leads.filter((l) => l.stage === "new_lead")]
+  // "Fresh" now means booked but nothing on the calendar yet — there's no
+  // separate "new lead" stage to check since Booked covers both a brand
+  // new lead and one with a call actually scheduled.
+  const freshLeads = [...leads.filter((l) => l.stage === "booked" && !l.nextCallAt)]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 8);
   const todaysConfirmedCalls = [...leads]
@@ -118,7 +121,7 @@ export default async function DashboardPage() {
     <div>
       <div className="mb-6">
         <div className="font-mono text-[0.6875rem] uppercase tracking-widest text-text-faint">Sales · Inside Sales</div>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Dashboard</h1>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Sales KPI</h1>
         <p className="mt-1 max-w-[65ch] text-[0.88rem] text-text-dim">
           Show rate, close rate, and cash collected — plus the queues worth checking today.
         </p>

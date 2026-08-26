@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { SettingsForm } from "@/components/settings-form";
+import { Card } from "@/components/ui/card";
 
 export default async function SettingsPage() {
   const departments = await db.brainFile.findMany({ where: { type: "department" } });
@@ -18,6 +20,29 @@ export default async function SettingsPage() {
         </p>
       </div>
       <SettingsForm departments={rows} />
+
+      <div className="mt-8 border-t border-border pt-8">
+        <h2 className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
+          Integrations
+        </h2>
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[0.86rem] font-bold">CRM webhook log</div>
+              <p className="mt-0.5 text-[0.78rem] text-text-dim">
+                Fathom and Calendly delivery history, connection status, and the &ldquo;fire a test
+                event&rdquo; tool — day-to-day noise, not something you need in the CRM&apos;s main nav.
+              </p>
+            </div>
+            <Link
+              href="/sales/crm/webhooks"
+              className="shrink-0 rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
+            >
+              Open →
+            </Link>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
