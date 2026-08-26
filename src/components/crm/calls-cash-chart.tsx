@@ -30,6 +30,9 @@ export function CallsCashChart({ points }: { points: ChartPoint[] }) {
 
   const conductedPath = points.map((p, i) => `${i === 0 ? "M" : "L"}${xFor(i)},${yForConducted(p.conducted)}`).join(" ");
   const cashPath = points.map((p, i) => `${i === 0 ? "M" : "L"}${xFor(i)},${yForCash(p.cash)}`).join(" ");
+  const floorY = PAD_TOP + PLOT_H;
+  const conductedArea = points.length > 0 ? `${conductedPath} L${xFor(points.length - 1)},${floorY} L${xFor(0)},${floorY} Z` : "";
+  const cashArea = points.length > 0 ? `${cashPath} L${xFor(points.length - 1)},${floorY} L${xFor(0)},${floorY} Z` : "";
 
   function handleMove(e: React.PointerEvent<SVGSVGElement>) {
     const svg = svgRef.current;
@@ -67,6 +70,17 @@ export function CallsCashChart({ points }: { points: ChartPoint[] }) {
             onPointerMove={handleMove}
             onPointerLeave={() => setHoverIndex(null)}
           >
+            <defs>
+              <linearGradient id="conductedFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CONDUCTED_COLOR} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={CONDUCTED_COLOR} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="cashFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CASH_COLOR} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={CASH_COLOR} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+
             {[0, 0.5, 1].map((f) => (
               <line
                 key={f}
@@ -79,14 +93,16 @@ export function CallsCashChart({ points }: { points: ChartPoint[] }) {
               />
             ))}
 
-            <path d={conductedPath} fill="none" stroke={CONDUCTED_COLOR} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-            <path d={cashPath} fill="none" stroke={CASH_COLOR} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            <path d={conductedArea} fill="url(#conductedFill)" stroke="none" />
+            <path d={cashArea} fill="url(#cashFill)" stroke="none" />
+            <path d={conductedPath} fill="none" stroke={CONDUCTED_COLOR} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+            <path d={cashPath} fill="none" stroke={CASH_COLOR} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
 
             {hoverIndex !== null && (
               <>
                 <line x1={xFor(hoverIndex)} x2={xFor(hoverIndex)} y1={PAD_TOP} y2={PAD_TOP + PLOT_H} stroke="var(--text-faint)" strokeWidth={1} />
-                <circle cx={xFor(hoverIndex)} cy={yForConducted(points[hoverIndex].conducted)} r={4} fill={CONDUCTED_COLOR} stroke="var(--surface)" strokeWidth={2} />
-                <circle cx={xFor(hoverIndex)} cy={yForCash(points[hoverIndex].cash)} r={4} fill={CASH_COLOR} stroke="var(--surface)" strokeWidth={2} />
+                <circle cx={xFor(hoverIndex)} cy={yForConducted(points[hoverIndex].conducted)} r={5} fill={CONDUCTED_COLOR} stroke="var(--surface)" strokeWidth={2} />
+                <circle cx={xFor(hoverIndex)} cy={yForCash(points[hoverIndex].cash)} r={5} fill={CASH_COLOR} stroke="var(--surface)" strokeWidth={2} />
               </>
             )}
           </svg>
