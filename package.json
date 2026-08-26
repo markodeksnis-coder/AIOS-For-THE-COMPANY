@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "sync-brain": "tsx scripts/sync-brain.ts",
     "seed:demo-leads": "tsx prisma/seed.ts",
     "migrate-turso": "tsx scripts/migrate-turso.ts",
@@ -45,6 +47,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.23",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }
