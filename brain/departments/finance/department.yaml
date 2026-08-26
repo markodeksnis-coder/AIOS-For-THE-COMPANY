@@ -21,7 +21,7 @@ kpis:
     target: "TODO"
     status: draft
 
-head_agent: null
+head_agent: "[[head-of-finance]]"
 team:
   - "[[marko]]"
 
