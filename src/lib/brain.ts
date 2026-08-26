@@ -24,7 +24,7 @@ export function parseYamlBody(file: BrainFile): Record<string, unknown> | null {
 
 /** "[[marko]]" (a literal string from a YAML body field) -> "marko" */
 export function stripWikilink(s: string): string {
-  return s.replace(/^\[\[|\]\]$/g, "").trim();
+  return s.trim().replace(/^\[\[|\]\]$/g, "").trim();
 }
 
 /** Replaces [[slug]] with a real markdown link, using the file's title as link text when known. */
