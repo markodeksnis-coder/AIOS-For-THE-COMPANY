@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 import { buildAgentSystemPrompt, runAgentConversation } from "@/lib/agent-runtime";
+import { runFollowUpSweep } from "@/lib/follow-up-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,5 +106,16 @@ export async function GET(request: NextRequest) {
   });
 
   const results = await Promise.all(agents.map(runOne));
-  return NextResponse.json({ ranAt: new Date().toISOString(), results });
+
+  // Same sweep the manual "Run AI follow-up sweep" button triggers — folded
+  // into this existing cron instead of its own Vercel cron entry, so a lead
+  // that goes cold gets a drafted follow-up even if nobody opens the CRM.
+  let followUpSweep: unknown;
+  try {
+    followUpSweep = await runFollowUpSweep();
+  } catch (err) {
+    followUpSweep = { ran: false, reason: err instanceof Error ? err.message : "Unknown error" };
+  }
+
+  return NextResponse.json({ ranAt: new Date().toISOString(), results, followUpSweep });
 }
