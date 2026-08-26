@@ -19,8 +19,31 @@ commands below have to be run from your own terminal.
 
 ## 1. Register the webhook subscription
 
-Calendly webhooks are created via their API, not a UI button. Run this
-from any terminal with `curl` (replace `YOUR_PAT` and the URL):
+Calendly webhooks are created via their API, not a UI button, and it
+requires a **Standard plan or higher** — webhook subscriptions return
+"Permission Denied" on the Free plan.
+
+First, find your organization UUID:
+
+```bash
+curl https://api.calendly.com/users/me -H "Authorization: Bearer YOUR_PAT"
+```
+
+— the response includes `current_organization`, a URL ending in your
+org's UUID.
+
+Next, **generate your own random signing key** — Calendly does not hand
+you one back; you provide it to Calendly, and Calendly then uses it to
+sign every webhook it sends you afterward:
+
+```bash
+openssl rand -hex 32
+```
+
+Copy that value — you need it both in the request below and in step 2.
+
+Now register the subscription (replace `YOUR_PAT`, `YOUR_ORG_UUID`, and
+`YOUR_SIGNING_KEY`):
 
 ```bash
 curl -X POST https://api.calendly.com/webhook_subscriptions \
@@ -30,21 +53,13 @@ curl -X POST https://api.calendly.com/webhook_subscriptions \
     "url": "https://aios-for-the-company.vercel.app/api/webhooks/calendly",
     "events": ["invitee.created", "invitee.canceled"],
     "organization": "https://api.calendly.com/organizations/YOUR_ORG_UUID",
-    "scope": "organization"
+    "scope": "organization",
+    "signing_key": "YOUR_SIGNING_KEY"
   }'
 ```
 
-To find your organization UUID, run:
-
-```bash
-curl https://api.calendly.com/users/me -H "Authorization: Bearer YOUR_PAT"
-```
-
-— the response includes `current_organization`, a URL ending in your
-org's UUID.
-
-The webhook registration response includes a **`signing_key`** — copy
-it, you need it in the next step. It's shown once.
+A successful response shows `"state": "active"` — it does **not** echo
+the signing key back, since you already have it from the step above.
 
 ## 2. Add the environment variables
 
@@ -62,23 +77,31 @@ Redeploy after adding these so the new values take effect.
 
 ## 3. Custom qualification questions
 
-The lead card shows five qualification fields, auto-filled from Calendly
-booking-form answers by matching **keywords in the question text** (see
-`src/lib/calendly.ts`, `FIELD_KEYWORDS`):
+The lead card shows five qualification fields, plus phone, auto-filled
+from Calendly booking-form answers by matching **keywords in the
+question text** (see `src/lib/calendly.ts`, `FIELD_KEYWORDS` and
+`PHONE_KEYWORDS`):
 
 | Lead field | Question text needs to contain |
 | --- | --- |
 | Location | "location", "where are you", "based", or "city" |
 | Instagram / LinkedIn | "instagram" or "linkedin" |
 | Years running agency | "years" or "how long" |
-| Monthly revenue | "revenue" |
+| Monthly revenue | "monthly revenue" — deliberately not a bare "revenue", so a separate "revenue goal" question on the same form doesn't collide with it |
 | Sells / runs paid ads | "do you sell", "do you currently sell", "paid ads", or "run ads" |
+| Phone | "phone number", "mobile number", or "text message" — only used as a fallback; Calendly's own SMS-reminder opt-in field is tried first |
+
+A revenue or "years" question phrased as a range (radio buttons like
+"$1k - $5k /mo") is handled too — the field stores the average of the
+range, not a garbled concatenation of the digits.
 
 Add these as custom questions on your Calendly event type's booking form,
 using wording that includes one of the keywords above, and answers will
 flow straight into the matching field. If a field comes through blank,
 the question wording probably doesn't contain a matching keyword —
-reword it, or extend the keyword list in `calendly.ts`.
+reword it, or extend the keyword list in `calendly.ts`. Deal value,
+company, and campaign/funnel are never auto-filled — those aren't things
+Calendly's booking form collects, so they stay manual.
 
 ## 4. Test it
 

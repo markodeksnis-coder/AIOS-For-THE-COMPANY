@@ -43,11 +43,18 @@ type QA = { question: string; answer: string };
  *  it, or extend the keyword list below. */
 const FIELD_KEYWORDS: { field: keyof ParsedQualification; keywords: string[] }[] = [
   { field: "sellsService", keywords: ["do you sell", "do you currently sell", "paid ads", "run ads"] },
-  { field: "monthlyRevenue", keywords: ["monthly revenue", "revenue"] },
+  // Deliberately "monthly revenue" only, not a bare "revenue" — a booking
+  // form asking both "Current Monthly Revenue" and a separate "revenue
+  // goal" question would otherwise match both to this one field, and
+  // whichever question comes later in Calendly's answer order silently
+  // overwrites the other (goal overwriting actual current revenue).
+  { field: "monthlyRevenue", keywords: ["monthly revenue"] },
   { field: "instagramOrLinkedin", keywords: ["instagram", "linkedin"] },
   { field: "yearsRunningAgency", keywords: ["years", "how long"] },
   { field: "location", keywords: ["location", "where are you", "based", "city"] },
 ];
+
+const PHONE_KEYWORDS = ["phone number", "mobile number", "text message"];
 
 export type ParsedQualification = {
   sellsService?: string;
@@ -57,10 +64,22 @@ export type ParsedQualification = {
   location?: string;
 };
 
+/** Handles both a plain number ("6") and a range-style radio-button answer
+ *  ("$1k - $5k /mo") — the latter is common for revenue-bracket questions.
+ *  A "k" suffix on a number means thousands. Multiple numbers found (a
+ *  range) average together into one representative figure. */
 function parseNumber(raw: string): number | undefined {
-  const cleaned = raw.replace(/[^0-9.]/g, "");
-  const n = Number(cleaned);
-  return cleaned && Number.isFinite(n) ? n : undefined;
+  const matches = raw.match(/[\d.]+\s*[kK]?/g);
+  if (!matches) return undefined;
+  const values = matches
+    .map((m) => {
+      const isThousands = /[kK]/.test(m);
+      const n = Number(m.replace(/[kK]/g, "").trim());
+      return Number.isFinite(n) ? n * (isThousands ? 1000 : 1) : NaN;
+    })
+    .filter((n) => Number.isFinite(n));
+  if (values.length === 0) return undefined;
+  return Math.round(values.reduce((sum, n) => sum + n, 0) / values.length);
 }
 
 export function parseQualificationAnswers(qa: QA[]): ParsedQualification {
@@ -78,6 +97,20 @@ export function parseQualificationAnswers(qa: QA[]): ParsedQualification {
     }
   }
   return result;
+}
+
+/** Phone isn't part of ParsedQualification (it's a Lead-level contact
+ *  field, not a qualification one) — a separate lookup so a booking form
+ *  that asks for a phone number via a custom question (rather than
+ *  Calendly's own SMS-reminder opt-in, which lands in
+ *  `text_reminder_number` instead) still gets captured. */
+export function phoneFromAnswers(qa: QA[]): string | undefined {
+  for (const { question, answer } of qa) {
+    if (!answer?.trim()) continue;
+    const q = question.toLowerCase();
+    if (PHONE_KEYWORDS.some((k) => q.includes(k))) return answer.trim();
+  }
+  return undefined;
 }
 
 export type CalendlyInviteePayload = {
