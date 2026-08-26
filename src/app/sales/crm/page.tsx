@@ -60,18 +60,6 @@ export default async function CrmPage() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            href="/sales/crm/dashboard"
-            className="rounded-lg bg-accent px-3 py-2 text-[0.78rem] font-semibold text-on-accent transition-colors hover:bg-accent-strong"
-          >
-            Dashboard →
-          </Link>
-          <Link
-            href="/sales/crm/follow-ups"
-            className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
-          >
-            Follow-ups →
-          </Link>
-          <Link
             href="/sales/crm/leads"
             className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
           >
@@ -99,12 +87,6 @@ export default async function CrmPage() {
                 {unmatchedCount}
               </span>
             )}
-          </Link>
-          <Link
-            href="/sales/crm/webhooks"
-            className="rounded-lg border border-border px-3 py-2 text-[0.78rem] font-semibold text-text-dim transition-colors hover:border-accent hover:text-foreground"
-          >
-            Webhooks →
           </Link>
         </div>
       </div>

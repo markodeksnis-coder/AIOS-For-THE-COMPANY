@@ -6,6 +6,8 @@ import {
   FolderKanban,
   BarChart3,
   Phone,
+  TrendingUp,
+  Send,
   FileText,
   Workflow,
   GraduationCap,
@@ -44,6 +46,8 @@ export async function Sidebar() {
           <NavLink href="/projects" icon={FolderKanban}>Projects</NavLink>
           <NavLink href="/scorecards" icon={BarChart3}>Scorecards</NavLink>
           <NavLink href="/sales/crm" icon={Phone}>Inside Sales CRM</NavLink>
+          <NavLink href="/sales/crm/dashboard" icon={TrendingUp}>Sales KPI</NavLink>
+          <NavLink href="/sales/crm/follow-ups" icon={Send}>Follow-ups</NavLink>
         </div>
 
         <div className="flex flex-col gap-0.5">
