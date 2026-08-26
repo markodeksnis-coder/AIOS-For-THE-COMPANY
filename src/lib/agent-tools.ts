@@ -206,6 +206,13 @@ export async function executeAgentTool(
         const priorityRaw = str(input, "priority");
         const priority =
           priorityRaw && (ISSUE_PRIORITIES as readonly string[]).includes(priorityRaw) ? priorityRaw : "none";
+        const projectId = str(input, "projectId");
+        if (projectId) {
+          const project = await db.project.findUnique({ where: { id: projectId }, select: { department: true } });
+          if (!project || project.department !== department) {
+            return { output: { error: "that project isn't in your department" }, summary: null, isError: true };
+          }
+        }
         const issue = await db.issue.create({
           data: {
             title,
@@ -214,7 +221,7 @@ export async function executeAgentTool(
             department,
             dueDate: str(input, "dueDate"),
             assignee: str(input, "assignee"),
-            projectId: str(input, "projectId"),
+            projectId,
           },
         });
         safeRevalidate("/issues", "/inbox", "/");
