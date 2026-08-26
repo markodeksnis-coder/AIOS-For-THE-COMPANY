@@ -21,6 +21,7 @@ import {
   type CallStatus,
   type CallResult,
 } from "@/lib/crm";
+import { FOLLOW_UP_SEQUENCES, getFollowUpSequence } from "@/lib/follow-up-sequences";
 
 export const SALES_TOOLS: Anthropic.Tool[] = [
   {
@@ -79,9 +80,21 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "get_follow_up_sequence",
+    description:
+      "Get the full message copy for one named follow-up SOP sequence (see the sequence index in your instructions) — every message it contains, with day, channel, and the real (placeholder-filled) body text to personalize from. Call this before drafting a closed-lost or on-demand follow-up whenever a matching sequence exists, so the draft is grounded in the company's actual written playbook instead of invented from scratch.",
+    input_schema: {
+      type: "object",
+      properties: {
+        sequenceId: { type: "string", enum: FOLLOW_UP_SEQUENCES.map((s) => s.id) },
+      },
+      required: ["sequenceId"],
+    },
+  },
+  {
     name: "save_lead_draft",
     description:
-      "Save a personalized outreach draft for a lead — the founder reviews and sends it themselves, this never sends anything. For a no-show lead, write an email AND a text (2 calls). For a closed-lost lead, write a Loom video script AND a text (2 calls). Use kind \"on_demand_followup\" for anything asked for directly (e.g. \"write a Loom script for Josh's call yesterday\") that isn't specifically a no-show or closed-lost trigger.",
+      "Save a personalized outreach draft for a lead — the founder reviews and sends it themselves, this never sends anything. For a no-show lead, write an email AND a text (2 calls) — there's no written SOP sequence for no-shows yet, so draft these from the call/lead specifics. For a closed-lost lead, first classify the lead's temperature (hot/warm/general/disqualified) from get_lead's debrief data (loss reason, root cause, objection type), call get_follow_up_sequence for the matching sequence, and write a Loom video script AND a text (2 calls) grounded in that sequence's real copy — fill in its placeholders (NAME, OBJECTION, etc.) from the actual call. Use kind \"on_demand_followup\" for anything asked for directly (e.g. \"write a Loom script for Josh's call yesterday\", \"draft the day 5 warm-list follow-up for Sarah\") — pull the matching sequence the same way when one applies. Every call MUST include leadId, kind, channel, and content — sequenceId/sequenceDay are optional but should be set whenever the draft came from a sequence, so it's tracked back to its source.",
     input_schema: {
       type: "object",
       properties: {
@@ -89,6 +102,12 @@ export const SALES_TOOLS: Anthropic.Tool[] = [
         kind: { type: "string", enum: ["no_show_followup", "closed_lost_followup", "on_demand_followup"] },
         channel: { type: "string", enum: ["email", "sms", "loom_script"] },
         content: { type: "string", description: "The actual drafted copy, ready to send/read." },
+        sequenceId: {
+          type: "string",
+          enum: FOLLOW_UP_SEQUENCES.map((s) => s.id),
+          description: "The SOP sequence this draft was pulled from, if any.",
+        },
+        sequenceDay: { type: "string", description: "The sequence's own day value for this message, e.g. \"0\" or \"17-21\", if any." },
       },
       required: ["leadId", "kind", "channel", "content"],
     },
@@ -285,11 +304,20 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         safeRevalidate("/sales/crm", `/sales/crm/${leadId}`);
         return { output: { leadId, stage }, summary: `Moved "${lead.name}" to ${stage}`, isError: false };
       }
+      case "get_follow_up_sequence": {
+        const sequenceId = str(input, "sequenceId");
+        if (!sequenceId) return { output: { error: "sequenceId is required" }, summary: null, isError: true };
+        const sequence = getFollowUpSequence(sequenceId);
+        if (!sequence) return { output: { error: `no sequence with id "${sequenceId}"` }, summary: null, isError: true };
+        return { output: sequence, summary: null, isError: false };
+      }
       case "save_lead_draft": {
         const leadId = str(input, "leadId");
         const kind = str(input, "kind");
         const channel = str(input, "channel");
         const content = str(input, "content");
+        const sequenceId = str(input, "sequenceId");
+        const sequenceDay = str(input, "sequenceDay");
         const validKinds = ["no_show_followup", "closed_lost_followup", "on_demand_followup"];
         if (
           !leadId ||
@@ -306,13 +334,37 @@ export async function executeSalesTool(name: string, input: Record<string, unkno
         }
         const lead = await db.lead.findUnique({ where: { id: leadId } });
         if (!lead) return { output: { error: "lead not found" }, summary: null, isError: true };
-        await db.leadDraft.create({ data: { leadId, kind, channel, content } });
-        safeRevalidate(`/sales/crm/${leadId}`);
+
         const kindLabel =
-          kind === "no_show_followup" ? "no-show" : kind === "closed_lost_followup" ? "closed-lost" : "follow-up";
+          kind === "no_show_followup"
+            ? "No-show follow-up"
+            : kind === "closed_lost_followup"
+              ? "Closed-lost follow-up"
+              : "On-demand follow-up";
+        const sequence = sequenceId ? getFollowUpSequence(sequenceId) : undefined;
+        const templateName = sequence ? `${kindLabel} — ${sequence.name}` : kindLabel;
+
+        // One touch centralizes every draft written for the same trigger —
+        // reuse the still-open (not yet sent) touch for this lead+template
+        // combo instead of spawning a duplicate queue entry every time the
+        // agent is asked to draft the email, then the text, for one event.
+        let touch = await db.followUpTouch.findFirst({
+          where: { leadId, templateName, sentAt: null },
+          orderBy: { createdAt: "desc" },
+        });
+        if (!touch) {
+          touch = await db.followUpTouch.create({
+            data: { leadId, templateName, dueAt: new Date() },
+          });
+        }
+
+        await db.leadDraft.create({
+          data: { leadId, kind, channel, content, sequenceId, sequenceDay, followUpTouchId: touch.id },
+        });
+        safeRevalidate(`/sales/crm/${leadId}`, "/sales/crm/follow-ups");
         return {
-          output: { leadId, kind, channel },
-          summary: `Drafted a ${channel} ${kindLabel} for "${lead.name}"`,
+          output: { leadId, kind, channel, followUpTouchId: touch.id },
+          summary: `Drafted a ${channel} ${kindLabel.toLowerCase()} for "${lead.name}" — queued in Follow-ups`,
           isError: false,
         };
       }
