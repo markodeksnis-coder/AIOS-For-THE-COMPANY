@@ -14,6 +14,7 @@ import {
   formatCET,
   toBerlinDatetimeLocal,
   initialsOf,
+  computeCallMetrics,
 } from "./crm";
 
 // This app changed its pipeline stage list once already this session (7
@@ -84,6 +85,54 @@ describe("formatCET / toBerlinDatetimeLocal", () => {
     const summerUtc = new Date("2026-07-15T10:30:00Z");
     expect(formatCET(summerUtc)).toContain("CEST");
     expect(toBerlinDatetimeLocal(summerUtc)).toBe("2026-07-15T12:30"); // UTC+2 in summer
+  });
+});
+
+describe("computeCallMetrics", () => {
+  function call(
+    callStatus: string,
+    result: string | null = null,
+    cashCollected: number | null = null
+  ): { callStatus: string; result: string | null; cashCollected: number | null } {
+    return { callStatus, result, cashCollected };
+  }
+
+  it("show rate excludes booked/cancelled/rescheduled calls from the denominator (real bug: these previously deflated the number)", () => {
+    // 6 showed, 2 no-show, plus 2 that never happened yet — cancelled and
+    // still-booked. A naive showed/total would read 6/10 = 60%; the correct
+    // reading is showed/(showed+no_show) = 6/8 = 75%, since a call that
+    // never had a chance to show shouldn't count against the rep.
+    const calls = [
+      ...Array(6).fill(call("showed")),
+      ...Array(2).fill(call("no_show")),
+      call("cancelled"),
+      call("booked"),
+    ];
+    const metrics = computeCallMetrics(calls);
+    expect(metrics.booked).toBe(10);
+    expect(metrics.conducted).toBe(6);
+    expect(metrics.showRate).toBe(75);
+  });
+
+  it("show rate is 0, not NaN or 100, when nothing has been attempted yet", () => {
+    const metrics = computeCallMetrics([call("booked"), call("cancelled")]);
+    expect(metrics.showRate).toBe(0);
+  });
+
+  it("close rate is closed_won ÷ conducted, 0 when nothing has been conducted yet", () => {
+    const calls = [call("showed", "closed_won"), call("showed", "closed_lost"), call("showed", "follow_up")];
+    expect(computeCallMetrics(calls).closeRate).toBe(33); // 1/3 rounded
+
+    expect(computeCallMetrics([call("booked")]).closeRate).toBe(0);
+  });
+
+  it("sums cash collected across every call regardless of status", () => {
+    const calls = [call("showed", "closed_won", 500), call("showed", "closed_won", 1500), call("no_show", null, null)];
+    expect(computeCallMetrics(calls).cash).toBe(2000);
+  });
+
+  it("returns all zeros for an empty list of calls", () => {
+    expect(computeCallMetrics([])).toEqual({ booked: 0, conducted: 0, showRate: 0, closeRate: 0, cash: 0 });
   });
 });
 

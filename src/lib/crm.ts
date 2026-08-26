@@ -187,6 +187,33 @@ export function toBerlinDatetimeLocal(date: Date): string {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
+export type CallMetrics = { booked: number; conducted: number; showRate: number; closeRate: number; cash: number };
+
+/** Aggregate metrics for a set of SalesCall rows — shared by the CRM
+ *  pipeline page's "Today Stats" rail, the dashboard's period tabs, and its
+ *  by-source/by-rep breakdown tables, so show rate is computed the same way
+ *  everywhere. Show rate is conducted ÷ attempted (showed + no_show), not
+ *  conducted ÷ booked — a call still on the calendar or one the prospect
+ *  cancelled never got a chance to show, and counting it against the rep
+ *  deflates the number. */
+export function computeCallMetrics(
+  calls: { callStatus: string; result: string | null; cashCollected: number | null }[]
+): CallMetrics {
+  const booked = calls.length;
+  const conducted = calls.filter((c) => c.callStatus === "showed").length;
+  const noShowed = calls.filter((c) => c.callStatus === "no_show").length;
+  const closedWon = calls.filter((c) => c.result === "closed_won").length;
+  const cash = calls.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
+  const attempted = conducted + noShowed;
+  return {
+    booked,
+    conducted,
+    showRate: attempted > 0 ? Math.round((conducted / attempted) * 100) : 0,
+    closeRate: conducted > 0 ? Math.round((closedWon / conducted) * 100) : 0,
+    cash,
+  };
+}
+
 export const initialsOf = (name: string) =>
   name
     .trim()
