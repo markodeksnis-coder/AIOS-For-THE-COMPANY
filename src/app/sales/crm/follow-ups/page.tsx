@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { NewFollowUpForm } from "@/components/crm/new-follow-up-form";
+import { FollowUpSweepButton } from "@/components/crm/follow-up-sweep-button";
 import { FollowUpQueue, type QueuedTouch } from "@/components/crm/follow-up-queue";
 import { FollowUpPeriodTabs, type FollowUpMetrics } from "@/components/crm/follow-up-period-tabs";
 import { FollowUpLog, type LoggedTouch } from "@/components/crm/follow-up-log";
@@ -112,6 +113,8 @@ export default async function FollowUpsPage() {
           ← Back to Pipeline
         </Link>
       </div>
+
+      <FollowUpSweepButton />
 
       <NewFollowUpForm leads={leads} templateNames={templateNames} />
 
