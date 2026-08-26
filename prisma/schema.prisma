@@ -209,6 +209,10 @@ model FollowUpTouch {
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  // Drafts the agent wrote for this touch (e.g. the email + text pair for one
+  // no-show/closed-lost trigger) — lets the queue show the actual copy
+  // instead of just a template name, so nothing has to be re-found by hand.
+  drafts        LeadDraft[]
 
   @@index([leadId])
   @@index([dueAt])
@@ -310,12 +314,23 @@ model LeadDraft {
   id        String   @id @default(cuid())
   leadId    String
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  kind      String // "no_show_followup" | "closed_lost_followup"
+  kind      String // "no_show_followup" | "closed_lost_followup" | "on_demand_followup"
   channel   String // "email" | "sms" | "loom_script"
   content   String
   createdAt DateTime @default(now())
+  // Which SOP sequence (follow-up-sequences.json) this content was drafted
+  // from, when one applied — null for the trigger kinds that have no written
+  // sequence yet (no-show) or for fully freeform on-demand drafts.
+  sequenceId  String?
+  sequenceDay String? // the sequence's own "day" field, stored as text since it's number|string|null there
+  // Ties this draft to the tracked Follow-ups queue entry it belongs to, so
+  // the queue can show the actual drafted copy instead of just a template
+  // name — one touch can hold more than one draft (e.g. email + text).
+  followUpTouchId String?
+  followUpTouch   FollowUpTouch? @relation(fields: [followUpTouchId], references: [id], onDelete: SetNull)
 
   @@index([leadId])
+  @@index([followUpTouchId])
 }
 
 // One row per inbound webhook delivery — Fathom today, Calendly reuses the

@@ -73,6 +73,19 @@ async function main() {
   const debriefedCount = await client.execute(`SELECT COUNT(*) as n FROM CallDebrief`);
   console.log(`${debriefableCount.rows[0].n} debriefable call(s) (showed/no_show), ${debriefedCount.rows[0].n} debrief(s) logged.`);
 
+  console.log("\n=== Follow-up touches (full queue snapshot) ===");
+  const touches = await client.execute(`
+    SELECT ft.templateName, ft.dueAt, ft.sentAt, ft.repliedAt, ft.watched, ft.viewCount, ft.bookedFromThis,
+           l.name as leadName
+    FROM FollowUpTouch ft JOIN Lead l ON l.id = ft.leadId
+    ORDER BY ft.dueAt ASC
+  `);
+  console.log(`${touches.rows.length} total follow-up touch(es) ever logged.`);
+  for (const r of touches.rows) {
+    const status = r.sentAt ? `sent ${r.sentAt}${r.repliedAt ? " (replied)" : ""}` : `queued, due ${r.dueAt}`;
+    console.log(`  ${r.leadName} | ${r.templateName} | ${status}`);
+  }
+
   client.close();
 }
 

@@ -10,6 +10,7 @@ import { DEPARTMENT_LABELS, parseYamlBody } from "@/lib/brain";
 import { AGENT_TOOLS, executeAgentTool } from "@/lib/agent-tools";
 import { SALES_TOOLS, executeSalesTool } from "@/lib/sales-tools";
 import type { DeptKpi } from "@/lib/scorecards";
+import { FOLLOW_UP_SEQUENCES, LEAD_TEMPERATURE_STAGES } from "@/lib/follow-up-sequences";
 
 const MODEL = "claude-opus-5";
 const MAX_TOOL_ROUNDS = 6;
@@ -74,7 +75,7 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
         `You have real tools scoped to the ${deptLabel} department only: you can read and create Issues and Projects, log Scorecard entries against the KPIs below, search and read your department's reference docs in full (search_docs, then get_doc — the reference material section below is only a titles+excerpts index, not the full text), and save a coaching note whenever the founder corrects you or gives you a standing preference to apply going forward — do this proactively, don't wait to be asked. Nothing you do can touch another department's data.`,
         "",
         department === "sales"
-          ? "You also have the Inside Sales CRM: list and search leads by name, inspect a lead's full detail (including every past call's status and result, notes, recording link, exact start time, Fathom transcript when one was captured, and its post-call debrief), log a call (callStatus — booked/showed/no_show/cancelled/rescheduled — plus an optional result once callStatus is 'showed': closed_won/closed_lost/follow_up/not_qualified — which moves the lead's stage automatically), move a lead's stage directly, and save a personalized follow-up draft. Drafts are never sent automatically — the founder reviews and sends them. For a no-show, draft an email AND a text. For a closed-lost lead, draft a Loom script AND a text. For a specific on-demand request (e.g. \"write a Loom script for Josh's call yesterday\"), find the lead and the right call first (use the transcript and debrief if present — they carry what was actually said, the objection raised, and why the deal didn't close), ground the draft in that, pick whichever Sales knowledge-doc folder actually fits the situation, and save it with kind \"on_demand_followup\". For a weekly-review request (\"what do I need to work on,\" \"what patterns should I focus on,\" \"how do I get better\"), call get_call_debriefs and actually read the raw debriefs, not just the counts — find the real pattern in the rep's own words (a repeated objection, the same CLOSER step breaking down, the same doubt moment), ground your suggestions in the Sales knowledge docs, and give a short, ranked, actionable list — not a data dump. If the pattern is clear and worth remembering going forward, save it as a coaching note too."
+          ? "You also have the Inside Sales CRM: list and search leads by name, inspect a lead's full detail (including every past call's status and result, notes, recording link, exact start time, Fathom transcript when one was captured, and its post-call debrief), log a call (callStatus — booked/showed/no_show/cancelled/rescheduled — plus an optional result once callStatus is 'showed': closed_won/closed_lost/follow_up/not_qualified — which moves the lead's stage automatically), move a lead's stage directly, and save a personalized follow-up draft. Drafts are never sent automatically — the founder reviews and sends them — but every draft you save with save_lead_draft automatically queues into the centralized Follow-ups tracker (same lead + trigger reuses one queue entry, so the email and the text you write for one event land together, not as two separate entries). For a no-show, draft an email AND a text — there's no written SOP sequence for no-shows yet, so ground these in the call/lead specifics as before, don't invent a fake sequence for it. For a closed-lost lead, first classify the lead's temperature (hot/warm/general/disqualified — see the sequence index below) from the debrief's loss reason, root cause, and objection type, call get_follow_up_sequence for the matching sequence, and draft a Loom video script AND a text (2 calls) grounded in that sequence's real copy — fill in its placeholders (NAME, OBJECTION, etc.) from what actually happened on the call, don't just paste the template. Pass sequenceId/sequenceDay to save_lead_draft whenever a sequence was used. For a specific on-demand request (e.g. \"write a Loom script for Josh's call yesterday\", \"draft the day 5 warm-list follow-up for Sarah\"), find the lead and the right call first (use the transcript and debrief if present — they carry what was actually said), pull the matching sequence the same way when one applies, ground the draft in that plus whichever Sales knowledge-doc folder fits the situation, and save it with kind \"on_demand_followup\". For a weekly-review request (\"what do I need to work on,\" \"what patterns should I focus on,\" \"how do I get better\"), call get_call_debriefs and actually read the raw debriefs, not just the counts — find the real pattern in the rep's own words (a repeated objection, the same CLOSER step breaking down, the same doubt moment), ground your suggestions in the Sales knowledge docs, and give a short, ranked, actionable list — not a data dump. If the pattern is clear and worth remembering going forward, save it as a coaching note too."
           : "",
         "",
         "Your department's KPIs:",
@@ -85,6 +86,21 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
         .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
         .join("\n")
     : "You do not have any real tools available right now.";
+
+  const sequenceIndex =
+    department === "sales"
+      ? [
+          "# Follow-up SOP sequences (index only — call get_follow_up_sequence(sequenceId) for the full message copy)",
+          "",
+          "Lead temperature stages:",
+          ...LEAD_TEMPERATURE_STAGES.map((s) => `- **${s.label}** (\`${s.id}\`): ${s.definition}`),
+          "",
+          "Written sequences:",
+          ...FOLLOW_UP_SEQUENCES.map((s) => `- **${s.name}** (\`${s.id}\`): ${s.useWhen}`),
+          "",
+          "There is no written sequence yet for call_no_show or call_cancelled — never fabricate one; draft those from the call specifics instead, as instructed above.",
+        ].join("\n")
+      : "";
 
   const now = new Date();
   const nowLabel = new Intl.DateTimeFormat("en-US", {
@@ -112,6 +128,8 @@ export async function buildAgentSystemPrompt(agent: BrainFile): Promise<string> 
     "Keep responses tight — lead with the outcome or the finding, skip the preamble and the bullet-point capability lists.",
     "",
     toolsSection,
+    "",
+    sequenceIndex,
     "",
     coachingSection,
     "",
