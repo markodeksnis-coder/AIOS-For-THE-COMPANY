@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import {
   callOutcomeLabel,
+  formatCET,
   DEBRIEFABLE_CALL_STATUSES,
   CLOSER_STEPS,
   CLOSER_STEP_LABELS,
@@ -15,7 +16,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function DebriefsPage() {
-  const [needsDebrief, totalDebriefableCalls] = await Promise.all([
+  const [needsDebrief, totalDebriefableCalls, needsOutcome] = await Promise.all([
     db.salesCall.findMany({
       where: { callStatus: { in: DEBRIEFABLE_CALL_STATUSES }, debrief: null },
       orderBy: { scheduledAt: "desc" },
@@ -23,6 +24,16 @@ export default async function DebriefsPage() {
       take: 30,
     }),
     db.salesCall.count({ where: { callStatus: { in: DEBRIEFABLE_CALL_STATUSES } } }),
+    // Leads whose booked call time has already passed but are still sitting
+    // at "booked" — the call happened, nothing logged what happened on it,
+    // so it can never reach a debrief. This is the queue that feeds
+    // "Needs a debrief" below; without it, calls silently go undebriefed.
+    db.lead.findMany({
+      where: { stage: "booked", nextCallAt: { lt: new Date() } },
+      orderBy: { nextCallAt: "asc" },
+      select: { id: true, name: true, nextCallAt: true },
+      take: 30,
+    }),
   ]);
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
@@ -108,6 +119,37 @@ export default async function DebriefsPage() {
         )}
       </Card>
 
+      <Card className="relative mb-6 overflow-hidden">
+        <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: "var(--graph-work)" }} aria-hidden />
+        <div className="p-4 pb-0">
+          <h2 className="text-[0.8rem] font-bold">
+            Needs an outcome logged{" "}
+            <span className="font-mono text-[0.68rem] font-normal text-text-faint">{needsOutcome.length}</span>
+          </h2>
+          <p className="mt-0.5 text-[0.76rem] text-text-faint">
+            Booked calls whose time has passed with nothing logged — the debrief queue below is empty until these
+            get an outcome.
+          </p>
+        </div>
+        {needsOutcome.length === 0 ? (
+          <p className="p-4 pt-3 text-[0.8rem] text-text-faint">Nothing overdue. Every booked call is either upcoming or logged.</p>
+        ) : (
+          <div className="mt-3">
+            {needsOutcome.map((l) => (
+              <Link
+                key={l.id}
+                href={`/sales/crm/${l.id}#log-call`}
+                className="flex items-center gap-3 border-t border-border px-4 py-2.5 text-[0.83rem] transition-colors hover:bg-surface-hover"
+              >
+                <span className="font-mono text-[0.72rem] text-text-faint">{formatCET(l.nextCallAt as Date)}</span>
+                <span className="flex-1 truncate font-bold">{l.name}</span>
+                <span className="text-[0.72rem] font-semibold text-accent-strong">Log outcome →</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
+
       <Card className="mb-6 overflow-hidden">
         <div className="p-4 pb-0">
           <h2 className="text-[0.8rem] font-bold">
@@ -118,11 +160,11 @@ export default async function DebriefsPage() {
           <p className="p-4 text-[0.8rem] text-text-faint">
             {totalDebriefableCalls === 0 ? (
               <>
-                No calls logged yet — go to{" "}
+                No calls have an outcome yet — log one above, use{" "}
                 <Link href="/sales/crm" className="font-semibold text-accent-strong hover:underline">
-                  the CRM dashboard
+                  Log a call
                 </Link>{" "}
-                and use Log a call, or connect Fathom/Calendly to have them land here automatically.
+                on a lead, or connect Fathom/Calendly to have them land here automatically.
               </>
             ) : (
               "Every disposed call has a debrief. Nice."
