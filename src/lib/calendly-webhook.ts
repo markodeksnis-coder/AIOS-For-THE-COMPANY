@@ -13,6 +13,7 @@ import { db } from "@/lib/db";
 import {
   verifyCalendlySignature,
   parseQualificationAnswers,
+  phoneFromAnswers,
   eventUriFrom,
   oldInviteeUriFrom,
   fetchCalendlyEventStartTime,
@@ -109,7 +110,10 @@ async function handleCreated(payload: CalendlyInviteePayload["payload"], eventTy
   // A fresh booking always means "there's a call on the calendar, not yet
   // reconfirmed" — regardless of where the lead was in the pipeline before.
   const sharedLeadData = {
-    phone: payload.text_reminder_number ?? undefined,
+    // Calendly's own SMS-reminder opt-in field first; a custom "phone
+    // number" question on the booking form (what most event types
+    // actually use) as the fallback.
+    phone: payload.text_reminder_number ?? phoneFromAnswers(payload.questions_and_answers ?? []) ?? undefined,
     timezone: payload.timezone ?? undefined,
     nextCallAt: startTime ? new Date(startTime) : undefined,
     calendlyEventUri: eventUri ?? undefined,

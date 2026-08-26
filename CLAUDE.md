@@ -1,5 +1,42 @@
 # Notes for Claude working on this repo
 
+## Calendly webhooks require a paid (Standard+) plan, and the signing key is yours to give, not theirs to return
+
+Two real gotchas hit while walking Marko through `docs/calendly-setup.md`
+live, both now fixed in that doc:
+
+- **`POST /webhook_subscriptions` returns `{"title":"Permission
+  Denied","message":"Please upgrade your Calendly account to
+  Standard"}`** on a Free-plan account — webhook subscriptions are a
+  Standard-plan-or-higher feature. There's no workaround; the account has
+  to actually upgrade before the registration call will succeed at all.
+- **The `signing_key` is NOT something Calendly generates and hands back
+  in the registration response.** It's the other way around: you
+  generate your own random value (`openssl rand -hex 32` works fine) and
+  pass it *in* the `POST /webhook_subscriptions` request body as
+  `signing_key` — Calendly then uses that value to sign every webhook it
+  sends afterward. The response body never echoes it back (no
+  `signing_key` field in a successful `"state":"active"` response), so
+  don't go looking for one there. The doc originally said the opposite
+  ("the response includes a signing_key — copy it") — that was simply
+  wrong and cost real back-and-forth before catching it. Whatever value
+  you generate is also what goes into `CALENDLY_WEBHOOK_SIGNING_KEY` in
+  Vercel.
+- If a webhook subscription was already created without a `signing_key`
+  (e.g. from following the old, wrong doc), Calendly's API doesn't
+  support adding one after the fact — `DELETE` that subscription by its
+  `uri` and re-`POST` a fresh one with `signing_key` included.
+
+Also: Calendly's booking-form answers for a revenue/years-style question
+often come through as a range from radio buttons (e.g. `"$1k - $5k
+/mo"`), not a plain number — `parseNumber` in `src/lib/calendly.ts`
+handles a `k`-suffixed range by averaging the bounds; don't revert it to
+a naive digit-strip, that produces nonsense (e.g. `"$1k - $5k /mo"` ->
+`"15"`). And a booking form's phone number question isn't necessarily
+Calendly's own `text_reminder_number` field — most real event types
+collect phone via a plain custom question instead, which needs the
+separate `phoneFromAnswers()` keyword lookup as a fallback.
+
 ## Fathom's API is also blocked from this sandbox
 
 Same category as the Calendly and Vercel restrictions in this file:
@@ -13,15 +50,19 @@ machine. `WebSearch` still works and its result snippets are usually
 enough to get exact field names/endpoints without needing `WebFetch` on
 the blocked domain.
 
-Marko has pasted both a Calendly PAT and, separately, a Fathom API key +
-webhook secret directly into chat despite the standing warning in this
-file and in the setup docs — don't ask him to do this, and if he does
-again, don't use the pasted value directly: point him at exactly what to
-run and where (his own terminal) and tell him plainly to rotate it
-afterward, since it's now sitting in this conversation's history. (The
-Fathom integration as built doesn't even use the API key at runtime — only
-the webhook signing secret — so there was no legitimate use for it
-regardless of it being pasted.)
+Marko has pasted a Calendly PAT directly into chat as plain text
+multiple times (not just a screenshot) while walking through the setup
+commands live, and separately a Fathom API key + webhook secret —
+despite the standing warning in this file and in the setup docs. He's
+also said plainly he doesn't want a security lecture repeated on every
+message. Balance those two: don't ask him to paste secrets, don't use a
+pasted value for anything beyond the one command it's needed for in that
+turn, and say once — briefly, not repeated — that he should rotate it
+once the setup is actually done, since it's sitting in this
+conversation's history. Don't hold up the actual task to relitigate this
+each time it happens again. (The Fathom integration as built doesn't
+even use the API key at runtime — only the webhook signing secret — so
+there was no legitimate use for it regardless of it being pasted.)
 
 ## Calendly's API is also blocked from this sandbox
 
