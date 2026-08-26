@@ -1,0 +1,33 @@
+name: Resolve issue
+
+# Manual WRITE utility against the real production database — marks one
+# Issue done and leaves a comment explaining why. Requires the exact
+# issue id (not title, to avoid ambiguous matching) and a resolution
+# comment. Never runs automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: "Exact Issue id to resolve (not title)"
+        required: true
+      resolution_comment:
+        description: "Comment explaining why this issue is being marked done"
+        required: true
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/resolve-issue.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          ISSUE_ID: ${{ github.event.inputs.issue_id }}
+          RESOLUTION_COMMENT: ${{ github.event.inputs.resolution_comment }}
