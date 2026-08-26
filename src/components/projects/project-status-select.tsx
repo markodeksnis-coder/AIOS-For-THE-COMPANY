@@ -9,6 +9,7 @@ export function ProjectStatusSelect({ id, status }: { id: string; status: string
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(status);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const style = PROJECT_STATUS_STYLE[current] ?? PROJECT_STATUS_STYLE.planning;
 
@@ -33,11 +34,22 @@ export function ProjectStatusSelect({ id, status }: { id: string; status: string
                 <button
                   key={s}
                   onClick={async () => {
+                    const previous = current;
                     setOpen(false);
                     setCurrent(s);
                     setPending(true);
-                    await setProjectStatus(id, s);
-                    setPending(false);
+                    setError(null);
+                    try {
+                      await setProjectStatus(id, s);
+                    } catch (err) {
+                      // A failed write must not leave the pill stuck on
+                      // "Saving…" forever, nor showing a status that was
+                      // never actually saved.
+                      setCurrent(previous);
+                      setError(err instanceof Error ? err.message : "Couldn't save that status — try again.");
+                    } finally {
+                      setPending(false);
+                    }
                   }}
                   className="flex items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-[0.78rem] font-semibold transition-colors hover:bg-surface-hover"
                 >
@@ -48,6 +60,11 @@ export function ProjectStatusSelect({ id, status }: { id: string; status: string
             })}
           </div>
         </>
+      )}
+      {error && (
+        <p className="absolute left-0 top-full z-20 mt-1 whitespace-nowrap text-[0.68rem] font-semibold text-critical">
+          {error}
+        </p>
       )}
     </div>
   );
