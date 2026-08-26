@@ -148,8 +148,17 @@ export async function importLeadsCsv(rows: CsvLeadRow[]) {
   const seenEmails = new Set<string>();
   const seenPhones = new Set<string>();
 
-  let created = 0;
   let skipped = 0;
+  const toCreate: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    company: string | null;
+    source: string | null;
+    notes: string | null;
+    stage: "booked";
+    stageProbability: number;
+  }[] = [];
 
   for (const row of rows) {
     const name = row.name?.trim();
@@ -170,26 +179,27 @@ export async function importLeadsCsv(rows: CsvLeadRow[]) {
       continue;
     }
 
-    await db.lead.create({
-      data: {
-        name,
-        email,
-        phone,
-        company: row.company?.trim() || null,
-        source: row.source?.trim() || null,
-        notes: row.notes?.trim() || null,
-        stage: "booked",
-        stageProbability: STAGE_DEFAULT_PROBABILITY.booked,
-      },
+    toCreate.push({
+      name,
+      email,
+      phone,
+      company: row.company?.trim() || null,
+      source: row.source?.trim() || null,
+      notes: row.notes?.trim() || null,
+      stage: "booked",
+      stageProbability: STAGE_DEFAULT_PROBABILITY.booked,
     });
-    created++;
     if (emailKey) seenEmails.add(emailKey);
     if (phone) seenPhones.add(phone);
   }
 
+  // Single bulk insert instead of one await per row — faster and avoids
+  // leaving the DB half-populated if something fails partway through.
+  if (toCreate.length > 0) await db.lead.createMany({ data: toCreate });
+
   revalidatePath("/sales/crm");
   revalidatePath("/sales/crm/leads");
-  return { created, skipped };
+  return { created: toCreate.length, skipped };
 }
 
 export async function deleteLead(id: string) {
@@ -332,16 +342,30 @@ export async function updateSalesCall(callId: string, formData: FormData) {
     const stage = result
       ? CALL_RESULT_TO_STAGE[result as CallResult]
       : CALL_STATUS_TO_STAGE[callStatus as CallStatus];
+
+    const leadData: {
+      stage?: string;
+      stageProbability?: number;
+      stageChangedAt?: Date;
+      cashCollected?: { increment: number };
+    } = {};
+
     if (stage) {
       const current = await tx.lead.findUnique({ where: { id: call.leadId }, select: { stage: true } });
-      await tx.lead.update({
-        where: { id: call.leadId },
-        data: {
-          stage,
-          stageProbability: STAGE_DEFAULT_PROBABILITY[stage as LeadStage],
-          ...(current?.stage !== stage ? { stageChangedAt: new Date() } : {}),
-        },
-      });
+      leadData.stage = stage;
+      leadData.stageProbability = STAGE_DEFAULT_PROBABILITY[stage as LeadStage];
+      if (current?.stage !== stage) leadData.stageChangedAt = new Date();
+    }
+
+    // logSalesCall increments the lead's running cashCollected by whatever
+    // was logged — editing that same call later has to apply the delta
+    // (new - old), not just overwrite the call row, or the lead's total
+    // silently drifts from the sum of its calls.
+    const cashDelta = (cashCollected ?? 0) - (call.cashCollected ?? 0);
+    if (cashDelta !== 0) leadData.cashCollected = { increment: cashDelta };
+
+    if (Object.keys(leadData).length > 0) {
+      await tx.lead.update({ where: { id: call.leadId }, data: leadData });
     }
   });
 
