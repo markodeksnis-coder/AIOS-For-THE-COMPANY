@@ -22,7 +22,7 @@ kpis:
     target: "TODO"
     status: draft
 
-head_agent: null
+head_agent: "[[head-of-operations]]"
 team:
   - "[[marko]]"
   - "[[sample-customer-success-lead]]"

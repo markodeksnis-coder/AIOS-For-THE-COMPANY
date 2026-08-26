@@ -73,6 +73,23 @@ async function main() {
   const debriefedCount = await client.execute(`SELECT COUNT(*) as n FROM CallDebrief`);
   console.log(`${debriefableCount.rows[0].n} debriefable call(s) (showed/no_show), ${debriefedCount.rows[0].n} debrief(s) logged.`);
 
+  console.log("\n=== Open Issues (real production backlog) ===");
+  const issues = await client.execute(`
+    SELECT title, status, priority, department, assignee, dueDate
+    FROM Issue
+    WHERE status NOT IN ('done', 'canceled')
+    ORDER BY
+      CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
+      createdAt DESC
+    LIMIT 30
+  `);
+  console.log(`${issues.rows.length} open issue(s) (excluding done/canceled):`);
+  for (const r of issues.rows) {
+    console.log(
+      `  [${r.priority}] ${r.title} | ${r.status} | dept=${r.department ?? "-"} | assignee=${r.assignee ?? "-"} | due=${r.dueDate ?? "-"}`
+    );
+  }
+
   console.log("\n=== Follow-up touches (full queue snapshot) ===");
   const touches = await client.execute(`
     SELECT ft.templateName, ft.dueAt, ft.sentAt, ft.repliedAt, ft.watched, ft.viewCount, ft.bookedFromThis,
