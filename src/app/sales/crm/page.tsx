@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { CrmBoard, type LeadRow } from "@/components/crm/crm-board";
 import { PipelineStatsRail, type TodayStats, type RailQueueItem } from "@/components/crm/pipeline-stats-rail";
-import { formatCET } from "@/lib/crm";
+import { formatCET, computeCallMetrics } from "@/lib/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +27,7 @@ export default async function CrmPage() {
   const todayStr = startOfToday.toISOString().slice(0, 10);
 
   const todaysCalls = leads.flatMap((l) => l.calls).filter((c) => c.scheduledAt === todayStr);
-  const conducted = todaysCalls.filter((c) => c.callStatus === "showed");
-  const closedWon = conducted.filter((c) => c.result === "closed_won");
-  const todayStats: TodayStats = {
-    booked: todaysCalls.length,
-    conducted: conducted.length,
-    showRate: todaysCalls.length > 0 ? Math.round((conducted.length / todaysCalls.length) * 100) : 0,
-    closeRate: conducted.length > 0 ? Math.round((closedWon.length / conducted.length) * 100) : 0,
-    cash: todaysCalls.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0),
-  };
+  const todayStats: TodayStats = computeCallMetrics(todaysCalls);
 
   const confirmedToday: RailQueueItem[] = leads
     .filter((l) => l.nextCallAt && l.nextCallAt >= startOfToday && l.nextCallAt < startOfTomorrow)

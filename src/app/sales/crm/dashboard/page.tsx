@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { IntegrationStatus } from "@/components/crm/integration-status";
 import { DashboardPeriodTabs, type PeriodMetrics } from "@/components/crm/dashboard-period-tabs";
 import { CallsCashChart } from "@/components/crm/calls-cash-chart";
-import { formatCET } from "@/lib/crm";
+import { formatCET, computeCallMetrics } from "@/lib/crm";
 
 const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-COMPANY/blob/main";
 
@@ -44,17 +44,7 @@ export default async function DashboardPage() {
 
   function periodMetrics(startStr: string, endStr: string): PeriodMetrics {
     const inRange = allCalls.filter((c) => c.scheduledAt >= startStr && c.scheduledAt <= endStr);
-    const booked = inRange.length;
-    const conducted = inRange.filter((c) => c.callStatus === "showed").length;
-    const closedWon = inRange.filter((c) => c.result === "closed_won").length;
-    const cash = inRange.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
-    return {
-      booked,
-      conducted,
-      showRate: booked > 0 ? Math.round((conducted / booked) * 100) : 0,
-      closeRate: conducted > 0 ? Math.round((closedWon / conducted) * 100) : 0,
-      cash,
-    };
+    return computeCallMetrics(inRange);
   }
 
   // Each tab compares against the immediately preceding period of the same
@@ -207,18 +197,8 @@ type KeyedCall = { key: string; callStatus: string; result: string | null; cashC
 function breakdownRows(calls: KeyedCall[]) {
   const grouped = groupBy(calls, (c) => c.key);
   return Object.entries(grouped).map(([key, group]) => {
-    const groupShowed = group.filter((c) => c.callStatus === "showed");
-    const groupNoShows = group.filter((c) => c.callStatus === "no_show");
-    const groupWon = group.filter((c) => c.result === "closed_won");
-    const groupAttempted = groupShowed.length + groupNoShows.length;
-    const cash = group.reduce((sum, c) => sum + (c.cashCollected ?? 0), 0);
-    return {
-      key,
-      calls: group.length,
-      showRate: groupAttempted > 0 ? Math.round((groupShowed.length / groupAttempted) * 100) : 0,
-      closeRate: groupShowed.length > 0 ? Math.round((groupWon.length / groupShowed.length) * 100) : 0,
-      cash,
-    };
+    const metrics = computeCallMetrics(group);
+    return { key, calls: metrics.booked, showRate: metrics.showRate, closeRate: metrics.closeRate, cash: metrics.cash };
   });
 }
 
