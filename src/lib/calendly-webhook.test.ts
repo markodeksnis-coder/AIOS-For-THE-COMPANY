@@ -4,7 +4,7 @@ import { createHmac } from "node:crypto";
 // Same mocking approach as fathom-webhook.test.ts — see that file's comment.
 const dbMock = vi.hoisted(() => ({
   lead: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
-  salesCall: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+  salesCall: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), upsert: vi.fn(), updateMany: vi.fn() },
   webhookEvent: { create: vi.fn() },
 }));
 
@@ -39,6 +39,7 @@ beforeEach(() => {
   dbMock.webhookEvent.create.mockResolvedValue({});
   dbMock.lead.findFirst.mockResolvedValue(null);
   dbMock.salesCall.findUnique.mockResolvedValue(null);
+  dbMock.salesCall.upsert.mockResolvedValue({});
   dbMock.salesCall.updateMany.mockResolvedValue({ count: 0 });
   dbMock.lead.updateMany.mockResolvedValue({ count: 0 });
 });
@@ -83,9 +84,33 @@ describe("processCalendlyWebhook — invitee.created", () => {
     expect(dbMock.lead.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ email: "josh@example.com", stage: "booked" }) })
     );
-    expect(dbMock.salesCall.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ leadId: "lead1", callStatus: "booked" }) })
+    // Goes through upsert (keyed on the unique calendlyInviteeUri), not a
+    // plain create — see the race-safety test below for why.
+    expect(dbMock.salesCall.create).not.toHaveBeenCalled();
+    expect(dbMock.salesCall.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { calendlyInviteeUri: "https://api.calendly.com/scheduled_events/abc/invitees/inv1" },
+        create: expect.objectContaining({ leadId: "lead1", callStatus: "booked" }),
+      })
     );
+  });
+
+  it("upserts instead of plain-creating the SalesCall, so a concurrent retry updates rather than crashing on the unique calendlyInviteeUri", async () => {
+    // Simulates the actual race: two near-simultaneous deliveries for the
+    // same invitee both see existingCall as null from their own findUnique
+    // read (Calendly retries deliveries, and the network call to fetch the
+    // event start time gives a real retry enough time to land mid-flight).
+    // A plain create() here would throw P2002 on the second delivery,
+    // surfacing as an unhandled 500 instead of the idempotent 200 the
+    // endpoint is supposed to return for every retry.
+    dbMock.lead.create.mockResolvedValue({ id: "lead1", name: "Josh Kennedy" });
+    const raw = invitePayload("invitee.created");
+
+    const result = await processCalendlyWebhook(raw, sign(raw));
+
+    expect(result.status).toBe(200);
+    expect(dbMock.salesCall.create).not.toHaveBeenCalled();
+    expect(dbMock.salesCall.upsert).toHaveBeenCalledTimes(1);
   });
 
   it("updates the existing lead by email instead of creating a duplicate", async () => {
