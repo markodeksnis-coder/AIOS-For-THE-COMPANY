@@ -158,6 +158,18 @@ async function handleCreated(payload: CalendlyInviteePayload["payload"], eventTy
       where: { id: existingCall.id },
       data: { leadId: lead.id, calendlyInviteeUri: inviteeUri, scheduledAt, startedAt, callStatus: "booked", result: null },
     });
+  } else if (inviteeUri) {
+    // Calendly does retry deliveries, and the network call above (fetching
+    // the event start time) is long enough that a retry can land while this
+    // invocation is still in flight — both would see existingCall as null
+    // and race to create the same calendlyInviteeUri, which is @unique.
+    // upsert makes the loser of that race update the row the winner just
+    // created instead of crashing on a P2002.
+    await db.salesCall.upsert({
+      where: { calendlyInviteeUri: inviteeUri },
+      create: { leadId: lead.id, calendlyInviteeUri: inviteeUri, scheduledAt, startedAt, callStatus: "booked", result: null },
+      update: { leadId: lead.id, scheduledAt, startedAt, callStatus: "booked", result: null },
+    });
   } else {
     await db.salesCall.create({
       data: { leadId: lead.id, calendlyInviteeUri: inviteeUri, scheduledAt, startedAt, callStatus: "booked", result: null },
