@@ -107,7 +107,10 @@ export default async function DashboardPage() {
     const tags = safeTags(l.tags);
     return tags.some((t) => /react|old lead/i.test(t));
   });
-  const freshLeads = [...leads.filter((l) => l.stage === "new_lead")]
+  // "Fresh" now means booked but nothing on the calendar yet — there's no
+  // separate "new lead" stage to check since Booked covers both a brand
+  // new lead and one with a call actually scheduled.
+  const freshLeads = [...leads.filter((l) => l.stage === "booked" && !l.nextCallAt)]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 8);
   const todaysConfirmedCalls = [...leads]

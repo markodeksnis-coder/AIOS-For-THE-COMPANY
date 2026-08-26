@@ -57,7 +57,7 @@ function leadFieldsFromForm(formData: FormData) {
 export async function createLead(formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Name is required");
-  const stage = (str(formData, "stage") ?? "new_lead") as LeadStage;
+  const stage = (str(formData, "stage") ?? "booked") as LeadStage;
 
   const lead = await db.lead.create({
     data: { name, stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage], ...leadFieldsFromForm(formData) },
@@ -92,16 +92,6 @@ export async function setLeadStage(id: string, stage: string) {
   revalidatePath(`/sales/crm/${id}`);
 }
 
-/** Marks a call confirmed ahead of time — a state change, not a call outcome. */
-export async function confirmLead(id: string) {
-  await db.lead.update({
-    where: { id },
-    data: { stage: "confirmed", stageProbability: STAGE_DEFAULT_PROBABILITY.confirmed, stageChangedAt: new Date() },
-  });
-  revalidatePath("/sales/crm");
-  revalidatePath(`/sales/crm/${id}`);
-}
-
 /** Persists a drag-and-drop move on the CRM board. */
 export async function moveLead(movedId: string, stage: string, columnOrder: string[]) {
   if (!LEAD_STAGES.includes(stage as never)) throw new Error(`Invalid stage: ${stage}`);
@@ -129,7 +119,7 @@ export async function moveLead(movedId: string, stage: string, columnOrder: stri
 export async function createLeadQuick(name: string) {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Name is required");
-  const stage: LeadStage = "new_lead";
+  const stage: LeadStage = "booked";
   const lead = await db.lead.create({
     data: { name: trimmed, stage, stageProbability: STAGE_DEFAULT_PROBABILITY[stage] },
   });
@@ -188,8 +178,8 @@ export async function importLeadsCsv(rows: CsvLeadRow[]) {
         company: row.company?.trim() || null,
         source: row.source?.trim() || null,
         notes: row.notes?.trim() || null,
-        stage: "new_lead",
-        stageProbability: STAGE_DEFAULT_PROBABILITY.new_lead,
+        stage: "booked",
+        stageProbability: STAGE_DEFAULT_PROBABILITY.booked,
       },
     });
     created++;

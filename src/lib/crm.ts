@@ -2,46 +2,37 @@
 // board, the lead detail page, and the dashboard all read from here so
 // stage names/colors never drift apart.
 //
-// The 7-stage pipeline (new_lead -> booked_unconfirmed -> confirmed ->
-// showed -> no_show | closed_won | closed_lost) is deliberately fixed —
-// no more stages than this without a real reason, so the data stays
-// disciplined enough to trust.
+// The 5-stage pipeline (booked -> showed -> closed_won | closed_lost,
+// with no_show as showed's sibling outcome) is deliberately fixed — no
+// more stages than this without a real reason, so the data stays
+// disciplined enough to trust. There is deliberately no separate "new
+// lead" or "confirmed" stage — every lead starts at "Booked" (whether or
+// not a call is actually on the calendar yet) and a booked call is either
+// showed or no-show, and a showed call is either closed or not.
 
 import { tagColor, parseTags } from "@/lib/project-style";
 
 export { tagColor, parseTags };
 
-export const LEAD_STAGES = [
-  "new_lead",
-  "booked_unconfirmed",
-  "confirmed",
-  "showed",
-  "no_show",
-  "closed_won",
-  "closed_lost",
-] as const;
+export const LEAD_STAGES = ["booked", "showed", "no_show", "closed_won", "closed_lost"] as const;
 export type LeadStage = (typeof LEAD_STAGES)[number];
 
 export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
-  new_lead: "New Lead",
-  booked_unconfirmed: "Booked (Unconfirmed)",
-  confirmed: "Confirmed",
+  booked: "Booked",
   showed: "Showed",
   no_show: "No-Show",
-  closed_won: "Closed Won",
-  closed_lost: "Closed Lost",
+  closed_won: "Close",
+  closed_lost: "No Close",
 };
 
 // Default win-probability by stage — auto-applied whenever a lead's stage
-// changes (booking, confirming, logging a call, dragging the board, a
-// Calendly/Fathom webhook), so the Expected Value ranking on the dashboard
-// works without ever asking a rep to type a probability by hand. Still a
-// plain number on the lead, not a formula, so a specific deal can still be
+// changes (booking, logging a call, dragging the board, a Calendly/Fathom
+// webhook), so the Expected Value ranking on the dashboard works without
+// ever asking a rep to type a probability by hand. Still a plain number
+// on the lead, not a formula, so a specific deal can still be
 // hand-adjusted later if it's genuinely more/less likely than the average.
 export const STAGE_DEFAULT_PROBABILITY: Record<LeadStage, number> = {
-  new_lead: 10,
-  booked_unconfirmed: 20,
-  confirmed: 35,
+  booked: 20,
   showed: 55,
   no_show: 15,
   closed_won: 100,
@@ -53,12 +44,10 @@ export const STAGE_DEFAULT_PROBABILITY: Record<LeadStage, number> = {
  *  downgrade a lead a rep has already moved further (no-show, closed)
  *  than that. Shared by the Fathom webhook and the unmatched-call
  *  assignment action so both apply the same rule. */
-export const OPEN_STAGES = new Set(["new_lead", "booked_unconfirmed", "confirmed"]);
+export const OPEN_STAGES = new Set(["booked"]);
 
 export const LEAD_STAGE_STYLE: Record<LeadStage, { bar: string; wash: string; text: string }> = {
-  new_lead: { bar: "#64748B", wash: "rgba(100,116,139,0.12)", text: "#94A3B8" },
-  booked_unconfirmed: { bar: "#3B82F6", wash: "rgba(59,130,246,0.12)", text: "#60A5FA" },
-  confirmed: { bar: "#14B8A6", wash: "rgba(20,184,166,0.12)", text: "#2DD4BF" },
+  booked: { bar: "#3B82F6", wash: "rgba(59,130,246,0.12)", text: "#60A5FA" },
   showed: { bar: "#8B5CF6", wash: "rgba(139,92,246,0.12)", text: "#A78BFA" },
   no_show: { bar: "#EF4444", wash: "rgba(239,68,68,0.12)", text: "#F87171" },
   closed_won: { bar: "#22C55E", wash: "rgba(34,197,94,0.12)", text: "#4ADE80" },
@@ -102,7 +91,7 @@ export const CALL_RESULT_LABELS: Record<CallResult, string> = {
  *  the lead stands). Overridden by CALL_RESULT_TO_STAGE once a result is
  *  logged, since the result is more specific. */
 export const CALL_STATUS_TO_STAGE: Record<CallStatus, LeadStage | null> = {
-  booked: "booked_unconfirmed",
+  booked: "booked",
   showed: "showed",
   no_show: "no_show",
   cancelled: null,

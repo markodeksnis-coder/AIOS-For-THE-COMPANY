@@ -7,7 +7,6 @@ import { LeadStageSelect } from "@/components/crm/lead-stage-select";
 import { LeadEditForm } from "@/components/crm/lead-edit-form";
 import { LogCallForm } from "@/components/crm/log-call-form";
 import { LeadDraftsPanel } from "@/components/crm/lead-drafts-panel";
-import { ConfirmCallButton } from "@/components/crm/confirm-call-button";
 import {
   parseTags,
   tagColor,
@@ -63,7 +62,6 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-extrabold tracking-tight">{lead.name}</h1>
               <LeadStageSelect id={lead.id} stage={lead.stage} />
-              {lead.stage === "booked_unconfirmed" && <ConfirmCallButton id={lead.id} />}
               {noShowCount > 0 && (
                 <span className="rounded-full border border-critical/40 px-2.5 py-0.5 text-[0.68rem] font-bold text-critical">
                   no-show ×{noShowCount}

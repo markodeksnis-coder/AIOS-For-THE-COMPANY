@@ -148,7 +148,7 @@ model Lead {
   productInterest  String?
   targetPrice      Float?
   repName          String? // free text, mirrors Issue.assignee — not a hard FK
-  stage            String   @default("new_lead")
+  stage            String   @default("booked")
   // Set every time `stage` changes (drag on the board, a call disposition,
   // a webhook) — never touched otherwise — so the pipeline can show how
   // long a lead has actually sat in its current stage, not just its age.

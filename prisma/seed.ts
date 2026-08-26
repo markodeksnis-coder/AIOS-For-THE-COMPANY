@@ -7,9 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
 const STAGE_DEFAULT_PROBABILITY: Record<string, number> = {
-  new_lead: 10,
-  booked_unconfirmed: 20,
-  confirmed: 35,
+  booked: 20,
   showed: 55,
   no_show: 15,
   closed_won: 100,
@@ -17,15 +15,15 @@ const STAGE_DEFAULT_PROBABILITY: Record<string, number> = {
 };
 
 const DEMO_LEADS = [
-  { name: "Jordan Blake", email: "jordan.blake@demo.aios-seed", phone: "+1 512 555 0101", company: "Blake Fitness Co", source: "facebook ads", stage: "new_lead" },
-  { name: "Priya Nair", email: "priya.nair@demo.aios-seed", phone: "+1 512 555 0102", company: "Nair Coaching", source: "referral", stage: "booked_unconfirmed" },
-  { name: "Marcus Webb", email: "marcus.webb@demo.aios-seed", phone: "+1 512 555 0103", company: "Webb Strength Studio", source: "organic", stage: "confirmed" },
+  { name: "Jordan Blake", email: "jordan.blake@demo.aios-seed", phone: "+1 512 555 0101", company: "Blake Fitness Co", source: "facebook ads", stage: "booked" },
+  { name: "Priya Nair", email: "priya.nair@demo.aios-seed", phone: "+1 512 555 0102", company: "Nair Coaching", source: "referral", stage: "booked" },
+  { name: "Marcus Webb", email: "marcus.webb@demo.aios-seed", phone: "+1 512 555 0103", company: "Webb Strength Studio", source: "organic", stage: "booked" },
   { name: "Elena Torres", email: "elena.torres@demo.aios-seed", phone: "+1 512 555 0104", company: "Torres Training", source: "cold outreach", stage: "showed", dealValue: 3000 },
   { name: "Devon Clarke", email: "devon.clarke@demo.aios-seed", phone: "+1 512 555 0105", company: "Clarke Gym Group", source: "facebook ads", stage: "no_show" },
   { name: "Sofia Ramirez", email: "sofia.ramirez@demo.aios-seed", phone: "+1 512 555 0106", company: "Ramirez Fit Labs", source: "referral", stage: "closed_won", dealValue: 3000, cashCollected: 3000 },
   { name: "Kai Thompson", email: "kai.thompson@demo.aios-seed", phone: "+1 512 555 0107", company: "Thompson Athletics", source: "organic", stage: "closed_lost", lossReason: "Not the right fit right now" },
-  { name: "Amara Osei", email: "amara.osei@demo.aios-seed", phone: "+1 512 555 0108", company: "Osei Wellness", source: "facebook ads", stage: "new_lead" },
-  { name: "Liam Fitzgerald", email: "liam.fitzgerald@demo.aios-seed", phone: "+1 512 555 0109", company: "Fitzgerald Fight Club", source: "cold outreach", stage: "confirmed" },
+  { name: "Amara Osei", email: "amara.osei@demo.aios-seed", phone: "+1 512 555 0108", company: "Osei Wellness", source: "facebook ads", stage: "booked" },
+  { name: "Liam Fitzgerald", email: "liam.fitzgerald@demo.aios-seed", phone: "+1 512 555 0109", company: "Fitzgerald Fight Club", source: "cold outreach", stage: "booked" },
   { name: "Nadia Kowalski", email: "nadia.kowalski@demo.aios-seed", phone: "+1 512 555 0110", company: "Kowalski Performance", source: "referral", stage: "showed", dealValue: 3000 },
 ];
 
