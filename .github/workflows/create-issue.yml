@@ -1,0 +1,48 @@
+name: Create issue
+
+# Manual WRITE utility against the real production database — files one
+# Issue. Companion to resolve-issue.yml. Never runs automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "Issue title"
+        required: true
+      description:
+        description: "Issue description (full context, not just a title)"
+        required: true
+      priority:
+        description: "none | low | medium | high | urgent"
+        required: false
+        default: "none"
+      department:
+        description: "Matching /brain department slug, e.g. sales, product"
+        required: false
+      assignee:
+        description: "A /brain person slug, e.g. marko"
+        required: false
+      due_date:
+        description: "ISO date YYYY-MM-DD, optional"
+        required: false
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/create-issue.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          TITLE: ${{ github.event.inputs.title }}
+          DESCRIPTION: ${{ github.event.inputs.description }}
+          PRIORITY: ${{ github.event.inputs.priority }}
+          DEPARTMENT: ${{ github.event.inputs.department }}
+          ASSIGNEE: ${{ github.event.inputs.assignee }}
+          DUE_DATE: ${{ github.event.inputs.due_date }}

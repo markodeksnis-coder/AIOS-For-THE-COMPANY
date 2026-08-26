@@ -58,13 +58,16 @@ async function handleCanceled(payload: CalendlyInviteePayload["payload"], eventT
   const inviteeUri = payload.uri ?? null;
   const email = payload.email?.trim() ?? null;
 
+  // A single updateMany instead of findUnique-then-update — Calendly does
+  // retry deliveries, and two near-simultaneous cancellations for the same
+  // invitee shouldn't be able to interleave into a lost update.
   let cancelledCall = false;
   if (inviteeUri) {
-    const existing = await db.salesCall.findUnique({ where: { calendlyInviteeUri: inviteeUri } });
-    if (existing) {
-      await db.salesCall.update({ where: { id: existing.id }, data: { callStatus: "cancelled" } });
-      cancelledCall = true;
-    }
+    const result = await db.salesCall.updateMany({
+      where: { calendlyInviteeUri: inviteeUri },
+      data: { callStatus: "cancelled" },
+    });
+    cancelledCall = result.count > 0;
   }
   if (email) {
     await db.lead.updateMany({ where: { email, nextCallAt: { not: null } }, data: { nextCallAt: null } });

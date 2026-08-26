@@ -11,11 +11,6 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: leadId } = await params;
 
-  const lead = await db.lead.findUnique({ where: { id: leadId } });
-  if (!lead) {
-    return NextResponse.json({ error: "Lead not found." }, { status: 404 });
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -29,6 +24,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       { error: "Body must be { kind: 'no_show_followup' | 'closed_lost_followup' }." },
       { status: 400 }
     );
+  }
+
+  const lead = await db.lead.findUnique({ where: { id: leadId } });
+  if (!lead) {
+    return NextResponse.json({ error: "Lead not found." }, { status: 404 });
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
