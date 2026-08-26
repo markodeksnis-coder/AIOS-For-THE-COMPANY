@@ -32,6 +32,7 @@ export type LeadRow = {
 export function CrmBoard({ leads }: { leads: LeadRow[] }) {
   const [columns, setColumns] = useState<Record<string, LeadRow[]>>(() => groupByStage(leads));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => setColumns(groupByStage(leads)), [leads]);
 
@@ -50,6 +51,10 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
     const overStage = findCardStage(columns, String(over.id)) ?? String(over.id);
     if (!activeStage || !LEAD_STAGES.includes(overStage as never)) return;
 
+    let rollback: Record<string, LeadRow[]> | null = null;
+    let movedId: string | null = null;
+    let destIds: string[] = [];
+
     setColumns((prev) => {
       const next = { ...prev };
       const sourceList = [...next[activeStage]];
@@ -65,13 +70,21 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
       next[activeStage] = activeStage === overStage ? destList : sourceList;
       next[overStage] = destList;
 
-      void moveLead(
-        moved.id,
-        overStage,
-        destList.map((l) => l.id)
-      );
+      rollback = prev;
+      movedId = moved.id;
+      destIds = destList.map((l) => l.id);
 
       return next;
+    });
+
+    if (!movedId) return;
+    setError(null);
+    // A failed write (invalid stage, a transient DB error) must not leave the
+    // card sitting in the wrong column with nothing telling the rep it didn't
+    // actually save — revert the optimistic move and surface why.
+    moveLead(movedId, overStage, destIds).catch((err) => {
+      if (rollback) setColumns(rollback);
+      setError(err instanceof Error ? err.message : "Couldn't move that lead — try again.");
     });
   }
 
@@ -84,6 +97,7 @@ export function CrmBoard({ leads }: { leads: LeadRow[] }) {
   return (
     <div>
       <NewLeadForm />
+      {error && <p className="mb-3 text-[0.78rem] text-critical">{error}</p>}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

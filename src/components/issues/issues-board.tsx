@@ -146,6 +146,7 @@ export function IssuesBoard({
   const peopleBySlug = new Map(people.map((p) => [p.slug, p.title]));
   const [columns, setColumns] = useState<Record<string, IssueRow[]>>(() => groupByStatus(issues));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => setColumns(groupByStatus(issues)), [issues]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -163,6 +164,10 @@ export function IssuesBoard({
     const overStatus = findStatus(columns, String(over.id)) ?? String(over.id);
     if (!activeStatus || !ISSUE_STATUSES.includes(overStatus as never)) return;
 
+    let rollback: Record<string, IssueRow[]> | null = null;
+    let movedId: string | null = null;
+    let destIds: string[] = [];
+
     setColumns((prev) => {
       const next = { ...prev };
       const sourceList = [...next[activeStatus]];
@@ -178,13 +183,21 @@ export function IssuesBoard({
       next[activeStatus] = activeStatus === overStatus ? destList : sourceList;
       next[overStatus] = destList;
 
-      void moveIssue(
-        moved.id,
-        overStatus,
-        destList.map((i) => i.id)
-      );
+      rollback = prev;
+      movedId = moved.id;
+      destIds = destList.map((i) => i.id);
 
       return next;
+    });
+
+    if (!movedId) return;
+    setError(null);
+    // A failed write must not leave the card sitting in the wrong column
+    // with nothing telling the viewer it didn't actually save — revert the
+    // optimistic move and surface why.
+    moveIssue(movedId, overStatus, destIds).catch((err) => {
+      if (rollback) setColumns(rollback);
+      setError(err instanceof Error ? err.message : "Couldn't move that issue — try again.");
     });
   }
 
@@ -195,45 +208,48 @@ export function IssuesBoard({
     : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {ISSUE_STATUSES.map((status) => {
-          const style = ISSUE_STATUS_STYLE[status];
-          const inColumn = columns[status] ?? [];
-          return (
-            <div key={status}>
-              <div
-                className="mb-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
-                style={{ backgroundColor: style.wash }}
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: style.bar }} />
-                <h2 className="text-[0.76rem] font-bold" style={{ color: style.text }}>
-                  {ISSUE_STATUS_LABELS[status]}
-                </h2>
-                <span className="ml-auto font-mono text-[0.65rem] text-text-faint">{inColumn.length}</span>
+    <>
+      {error && <p className="mb-3 text-[0.78rem] text-critical">{error}</p>}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {ISSUE_STATUSES.map((status) => {
+            const style = ISSUE_STATUS_STYLE[status];
+            const inColumn = columns[status] ?? [];
+            return (
+              <div key={status}>
+                <div
+                  className="mb-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                  style={{ backgroundColor: style.wash }}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: style.bar }} />
+                  <h2 className="text-[0.76rem] font-bold" style={{ color: style.text }}>
+                    {ISSUE_STATUS_LABELS[status]}
+                  </h2>
+                  <span className="ml-auto font-mono text-[0.65rem] text-text-faint">{inColumn.length}</span>
+                </div>
+                <SortableContext items={inColumn.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                  <DroppableColumn status={status} empty={inColumn.length === 0}>
+                    {inColumn.map((i) => (
+                      <SortableIssueCard key={i.id} issue={i} peopleBySlug={peopleBySlug} />
+                    ))}
+                    {inColumn.length === 0 && (
+                      <p className="px-2 py-3 text-center text-[0.7rem] text-text-faint">Drop here</p>
+                    )}
+                  </DroppableColumn>
+                </SortableContext>
               </div>
-              <SortableContext items={inColumn.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-                <DroppableColumn status={status} empty={inColumn.length === 0}>
-                  {inColumn.map((i) => (
-                    <SortableIssueCard key={i.id} issue={i} peopleBySlug={peopleBySlug} />
-                  ))}
-                  {inColumn.length === 0 && (
-                    <p className="px-2 py-3 text-center text-[0.7rem] text-text-faint">Drop here</p>
-                  )}
-                </DroppableColumn>
-              </SortableContext>
-            </div>
-          );
-        })}
-      </div>
-      <DragOverlay>
-        {activeIssue ? <IssueCard issue={activeIssue} peopleBySlug={peopleBySlug} dragging /> : null}
-      </DragOverlay>
-    </DndContext>
+            );
+          })}
+        </div>
+        <DragOverlay>
+          {activeIssue ? <IssueCard issue={activeIssue} peopleBySlug={peopleBySlug} dragging /> : null}
+        </DragOverlay>
+      </DndContext>
+    </>
   );
 }

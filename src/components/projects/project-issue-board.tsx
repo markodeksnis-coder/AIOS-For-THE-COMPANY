@@ -103,6 +103,7 @@ function groupByStatus(issues: MiniIssue[]): Record<string, MiniIssue[]> {
 export function ProjectIssueBoard({ issues }: { issues: MiniIssue[] }) {
   const [columns, setColumns] = useState<Record<string, MiniIssue[]>>(() => groupByStatus(issues));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => setColumns(groupByStatus(issues)), [issues]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -126,6 +127,7 @@ export function ProjectIssueBoard({ issues }: { issues: MiniIssue[] }) {
     }
     if (!moved || moved.status === targetStatus) return;
 
+    const rollback = columns;
     setColumns((prev) => {
       const next: Record<string, MiniIssue[]> = {};
       for (const [status, list] of Object.entries(prev)) {
@@ -135,7 +137,14 @@ export function ProjectIssueBoard({ issues }: { issues: MiniIssue[] }) {
       return next;
     });
 
-    void setIssueField(moved.id, "status", targetStatus);
+    setError(null);
+    // A failed write must not leave the card sitting in the wrong column
+    // with nothing telling the viewer it didn't actually save — revert the
+    // optimistic move and surface why.
+    setIssueField(moved.id, "status", targetStatus).catch((err) => {
+      setColumns(rollback);
+      setError(err instanceof Error ? err.message : "Couldn't move that issue — try again.");
+    });
   }
 
   const activeIssue = activeId
@@ -145,41 +154,44 @@ export function ProjectIssueBoard({ issues }: { issues: MiniIssue[] }) {
     : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {ISSUE_STATUSES.map((status) => {
-          const style = COLUMN_STYLE[status];
-          const inColumn = columns[status] ?? [];
-          return (
-            <div key={status}>
-              <div
-                className="mb-2 flex items-center gap-1.5 rounded-lg px-2 py-1"
-                style={{ backgroundColor: style.wash }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: style.bar }} />
-                <h3 className="text-[0.7rem] font-bold" style={{ color: style.text }}>
-                  {ISSUE_STATUS_LABELS[status]}
-                </h3>
-                <span className="ml-auto font-mono text-[0.6rem] text-text-faint">{inColumn.length}</span>
+    <>
+      {error && <p className="mb-3 text-[0.78rem] text-critical">{error}</p>}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {ISSUE_STATUSES.map((status) => {
+            const style = COLUMN_STYLE[status];
+            const inColumn = columns[status] ?? [];
+            return (
+              <div key={status}>
+                <div
+                  className="mb-2 flex items-center gap-1.5 rounded-lg px-2 py-1"
+                  style={{ backgroundColor: style.wash }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: style.bar }} />
+                  <h3 className="text-[0.7rem] font-bold" style={{ color: style.text }}>
+                    {ISSUE_STATUS_LABELS[status]}
+                  </h3>
+                  <span className="ml-auto font-mono text-[0.6rem] text-text-faint">{inColumn.length}</span>
+                </div>
+                <DroppableColumn status={status}>
+                  {inColumn.map((i) => (
+                    <DraggableIssueCard key={i.id} issue={i} />
+                  ))}
+                  {inColumn.length === 0 && (
+                    <p className="px-1 py-2 text-center text-[0.65rem] text-text-faint">Drop here</p>
+                  )}
+                </DroppableColumn>
               </div>
-              <DroppableColumn status={status}>
-                {inColumn.map((i) => (
-                  <DraggableIssueCard key={i.id} issue={i} />
-                ))}
-                {inColumn.length === 0 && (
-                  <p className="px-1 py-2 text-center text-[0.65rem] text-text-faint">Drop here</p>
-                )}
-              </DroppableColumn>
-            </div>
-          );
-        })}
-      </div>
-      <DragOverlay>{activeIssue ? <IssueCard issue={activeIssue} dragging /> : null}</DragOverlay>
-    </DndContext>
+            );
+          })}
+        </div>
+        <DragOverlay>{activeIssue ? <IssueCard issue={activeIssue} dragging /> : null}</DragOverlay>
+      </DndContext>
+    </>
   );
 }
