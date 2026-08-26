@@ -49,7 +49,8 @@ export function LeadDraftsPanel({
   }
 
   return (
-    <Card className="p-4">
+    <Card className="relative overflow-hidden p-4">
+      <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: "var(--graph-knowledge)" }} aria-hidden />
       <h2 className="mb-3 text-[0.8rem] font-bold">Follow-up drafts</h2>
       <p className="mb-3 text-[0.76rem] text-text-dim">
         Head of Sales writes these — nothing sends automatically, you copy and send yourself.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Mail, Phone, DollarSign, Clock, MapPin, AtSign, CalendarClock, Building2 } from "lucide-react";
+import { Mail, Phone, DollarSign, Clock, MapPin, AtSign, CalendarClock, Building2, Video } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { LeadStageSelect } from "@/components/crm/lead-stage-select";
@@ -49,14 +49,21 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     { label: "Sells / runs paid ads?", value: lead.sellsService },
   ].filter((f) => f.value);
 
+  // Most recent call that actually has something Fathom pulled in — surfaced
+  // at the top with the rest of the pulled-in data, not buried down in the
+  // full call history below.
+  const latestFathomCall = lead.calls.find((c) => c.aiSummary || c.recordingLink);
+
   return (
     <div className="mx-auto max-w-6xl">
       <Link href="/sales/crm" className="mb-4 inline-block text-[0.8rem] text-text-dim hover:text-accent">
         ← CRM
       </Link>
 
-      {/* One-glance qualification card */}
-      <Card className="mb-6 p-6">
+      {/* One-glance qualification card — everything pulled in from Calendly
+          and Fathom lives here, at the top, before anything else. */}
+      <Card className="relative mb-6 overflow-hidden p-6">
+        <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: "var(--graph-people)" }} aria-hidden />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -149,6 +156,28 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           </div>
         )}
 
+        {latestFathomCall && (
+          <div className="mt-5 rounded-lg border border-border bg-surface-2 p-3.5">
+            <div className="mb-1.5 flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-text-faint">
+              <Video size={12} />
+              Latest recording — {latestFathomCall.scheduledAt}
+            </div>
+            {latestFathomCall.aiSummary && (
+              <p className="text-[0.82rem] text-text-dim">{latestFathomCall.aiSummary}</p>
+            )}
+            {latestFathomCall.recordingLink && (
+              <a
+                href={latestFathomCall.recordingLink}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block text-[0.78rem] font-semibold text-accent-strong hover:underline"
+              >
+                Watch recording ↗
+              </a>
+            )}
+          </div>
+        )}
+
         {lead.notes && <p className="mt-4 max-w-[70ch] text-[0.85rem] text-text-dim">{lead.notes}</p>}
       </Card>
 
@@ -160,7 +189,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             initialDrafts={lead.drafts.map((d) => ({ ...d, createdAt: d.createdAt.toISOString() }))}
           />
 
-          <Card className="p-4">
+          <Card className="relative overflow-hidden p-4">
+            <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: "#8B5CF6" }} aria-hidden />
             <h2 className="mb-3 text-[0.8rem] font-bold">Call history</h2>
             {lead.calls.length === 0 ? (
               <p className="text-[0.8rem] text-text-faint">No calls logged yet.</p>
