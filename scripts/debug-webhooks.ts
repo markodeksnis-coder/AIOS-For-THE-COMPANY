@@ -66,6 +66,13 @@ async function main() {
     console.log(`  ${r.scheduledAt} | ${r.callStatus} | result=${r.result ?? "-"} | recordingId=${r.fathomRecordingId}`);
   }
 
+  console.log("\n=== Call debrief coverage ===");
+  const debriefableCount = await client.execute(
+    `SELECT COUNT(*) as n FROM SalesCall WHERE callStatus IN ('showed', 'no_show')`
+  );
+  const debriefedCount = await client.execute(`SELECT COUNT(*) as n FROM CallDebrief`);
+  console.log(`${debriefableCount.rows[0].n} debriefable call(s) (showed/no_show), ${debriefedCount.rows[0].n} debrief(s) logged.`);
+
   client.close();
 }
 
