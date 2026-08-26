@@ -12,6 +12,7 @@ type StoredAction = { tool: string; summary: string };
 
 const KIND_LABEL: Record<string, string> = {
   daily_digest: "Daily check-in",
+  follow_up_sweep: "AI follow-up sweep",
 };
 
 function formatWhen(d: Date): string {
