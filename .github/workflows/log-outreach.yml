@@ -1,9 +1,10 @@
 name: Log outreach
 
-# Manual WRITE utility against the real production database — logs the
-# daily outreach numbers (DMs sent, positive replies, messages sent, Skool
-# members joined) that /dashboard shows. Fed by the daily Slack check-in.
-# Never runs automatically.
+# Manual WRITE utility against the real production database — logs one
+# date+setter+source's cold-outbound numbers (DMs sent, replies, positive
+# replies, members joined, appointments booked/shows/no-shows, cash) that
+# the /dashboard, /dashboard/outbound, and /dashboard/appointments pages
+# read. Fed by the daily Slack check-in. Never runs automatically.
 
 on:
   workflow_dispatch:
@@ -11,17 +12,35 @@ on:
       date:
         description: "YYYY-MM-DD — defaults to today if left blank"
         required: false
+      setter:
+        description: "Marko | DMdroid"
+        required: true
+      source:
+        description: "Skool | LinkedIn | Instagram"
+        required: true
       dms_sent:
         description: "DMs sent"
+        required: false
+      replies_received:
+        description: "Replies received"
         required: false
       positive_replies:
         description: "Positive replies"
         required: false
-      messages_sent:
-        description: "Messages sent"
+      members_joined:
+        description: "Members joined"
         required: false
-      skool_members_joined:
-        description: "Skool members joined"
+      appointments_booked:
+        description: "Appointments booked"
+        required: false
+      shows:
+        description: "Shows"
+        required: false
+      no_shows:
+        description: "No-shows"
+        required: false
+      cash_collected:
+        description: "Cash collected ($)"
         required: false
 
 jobs:
@@ -39,7 +58,13 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           DATE: ${{ github.event.inputs.date }}
+          SETTER: ${{ github.event.inputs.setter }}
+          SOURCE: ${{ github.event.inputs.source }}
           DMS_SENT: ${{ github.event.inputs.dms_sent }}
+          REPLIES_RECEIVED: ${{ github.event.inputs.replies_received }}
           POSITIVE_REPLIES: ${{ github.event.inputs.positive_replies }}
-          MESSAGES_SENT: ${{ github.event.inputs.messages_sent }}
-          SKOOL_MEMBERS_JOINED: ${{ github.event.inputs.skool_members_joined }}
+          MEMBERS_JOINED: ${{ github.event.inputs.members_joined }}
+          APPOINTMENTS_BOOKED: ${{ github.event.inputs.appointments_booked }}
+          SHOWS: ${{ github.event.inputs.shows }}
+          NO_SHOWS: ${{ github.event.inputs.no_shows }}
+          CASH_COLLECTED: ${{ github.event.inputs.cash_collected }}

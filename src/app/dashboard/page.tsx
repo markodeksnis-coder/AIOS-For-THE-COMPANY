@@ -1,46 +1,23 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
-import { KpiCard } from "@/components/scorecards/kpi-card";
+import { DashboardTabs } from "@/components/outreach/dashboard-tabs";
 import { computeCallMetrics } from "@/lib/crm";
-import type { DeptKpi } from "@/lib/scorecards";
+import { sumOutreach } from "@/lib/outreach";
 
 export const dynamic = "force-dynamic";
-
-// The manual numbers here (nothing in this app captures them automatically —
-// no DM/Skool integration exists) are logged the same way every other
-// hand-tracked number in this app is: through addScorecardEntry, reusing
-// KpiCard exactly as /scorecards does. "outreach" isn't a real department —
-// it's just a ScorecardEntry.department value (a plain string, no schema
-// change needed) so these don't show up mixed into the per-department
-// Scorecards page.
-const OUTREACH_DEPARTMENT = "outreach";
-const OUTREACH_KPIS: DeptKpi[] = [
-  { name: "DMs sent", target: "Log daily" },
-  { name: "Positive replies", target: "Log daily" },
-  { name: "Messages sent", target: "Log daily" },
-  { name: "Skool members joined", target: "Log daily" },
-];
 
 export default async function DashboardPage() {
   const now = new Date();
   const todayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 10);
 
-  const [todaysCalls, outreachEntries] = await Promise.all([
+  const [todaysCalls, todaysOutreach] = await Promise.all([
     db.salesCall.findMany({ where: { scheduledAt: todayStr } }),
-    db.scorecardEntry.findMany({ where: { department: OUTREACH_DEPARTMENT } }),
+    db.outreachLog.findMany({ where: { date: todayStr } }),
   ]);
 
   const callStats = computeCallMetrics(todaysCalls);
-
-  const entriesFor = (kpiName: string) => outreachEntries.filter((e) => e.kpiName === kpiName);
-  const latestValue = (kpiName: string) => {
-    const rows = entriesFor(kpiName);
-    if (rows.length === 0) return null;
-    return [...rows].sort((a, b) => b.period.localeCompare(a.period))[0].value;
-  };
-  const dmsSent = latestValue("DMs sent") ?? 0;
-  const positiveReplies = latestValue("Positive replies") ?? 0;
-  const replyRate = dmsSent > 0 ? Math.round((positiveReplies / dmsSent) * 100) : 0;
+  const outreachStats = sumOutreach(todaysOutreach);
 
   return (
     <div>
@@ -49,6 +26,8 @@ export default async function DashboardPage() {
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-[0.88rem] text-text-dim">Everything that matters, today — calls straight from the CRM, outreach logged by hand.</p>
       </div>
+
+      <DashboardTabs active="/dashboard" />
 
       <section className="mb-8">
         <h2 className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
@@ -63,20 +42,22 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="mb-8">
-        <h2 className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
-          Outreach (today, logged by hand)
+      <section>
+        <h2 className="mb-3 flex items-center justify-between font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
+          <span>Outreach (today, logged by hand)</span>
+          <span className="normal-case">
+            <Link href="/dashboard/outbound" className="text-accent-strong">Cold Outbound</Link>
+            {" · "}
+            <Link href="/dashboard/appointments" className="text-accent-strong">Appointment Reporting</Link>
+          </span>
         </h2>
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          <StatTile label="DMs sent" value={String(dmsSent)} />
-          <StatTile label="Positive replies" value={String(positiveReplies)} />
-          <StatTile label="Reply rate" value={`${replyRate}%`} good />
-          <StatTile label="Messages sent" value={String(latestValue("Messages sent") ?? 0)} />
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {OUTREACH_KPIS.map((kpi) => (
-            <KpiCard key={kpi.name} department={OUTREACH_DEPARTMENT} kpi={kpi} entries={entriesFor(kpi.name)} />
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <StatTile label="DMs sent" value={String(outreachStats.dmsSent)} />
+          <StatTile label="Reply rate" value={`${outreachStats.replyRate}%`} good />
+          <StatTile label="Positive replies" value={String(outreachStats.positiveReplies)} />
+          <StatTile label="Members joined" value={String(outreachStats.membersJoined)} good />
+          <StatTile label="Appointments booked" value={String(outreachStats.appointmentsBooked)} />
+          <StatTile label="Show rate" value={`${outreachStats.showRate}%`} good />
         </div>
       </section>
     </div>
