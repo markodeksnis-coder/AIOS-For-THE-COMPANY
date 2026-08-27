@@ -30,7 +30,14 @@ running these:
 - **Create issue** (`scripts/create-issue.ts`) — files a new Issue.
   Inputs: `title`, `description` (required); `priority` /
   `department` / `assignee` / `due_date` (optional).
+- **Set lead email** (`scripts/set-lead-email.ts`) — backfills a Lead's
+  email when it's missing from the CRM but a human has it from
+  somewhere Claude can't reach directly (Calendly's API is blocked
+  from this sandbox — see the "Calendly's API is also blocked" section
+  of `CLAUDE.md`). Inputs: `lead_name` (exact, case-insensitive) or
+  `lead_id` (required if the name matches more than one lead — get it
+  from Debug webhooks or Backlog review's output), `email`.
 
-All four require the same `DATABASE_URL` / `TURSO_AUTH_TOKEN` repo
+All five require the same `DATABASE_URL` / `TURSO_AUTH_TOKEN` repo
 secrets as `build-check.yml` (Settings → Secrets and variables →
 Actions) — already configured if CI is green.
