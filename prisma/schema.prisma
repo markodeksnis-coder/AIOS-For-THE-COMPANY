@@ -374,6 +374,35 @@ model CronRun {
   reason String // "missing_cron_secret_env" | "unauthorized" | "missing_anthropic_api_key" | "success"
 }
 
+// One day's hand-logged cold-outbound numbers for one setter on one
+// source — DMs sent, replies, members joined, and the appointments that
+// came from that outreach. No integration exists for Skool/LinkedIn/
+// Instagram DMs, so every row here is typed in by hand (the "Cold
+// Outbound"/"Appointment Reporting" dashboard tabs, fed by the daily
+// Slack check-in). One row per date+setter+source — logging the same
+// combination twice updates the existing row instead of duplicating it,
+// same upsert pattern as ScorecardEntry's admin scripts.
+model OutreachLog {
+  id                 String   @id @default(cuid())
+  date               String // ISO date (YYYY-MM-DD)
+  setter             String // e.g. "Marko", "DMdroid"
+  source             String // e.g. "Skool", "LinkedIn", "Instagram"
+  dmsSent            Int      @default(0)
+  repliesReceived    Int      @default(0)
+  positiveReplies    Int      @default(0)
+  membersJoined      Int      @default(0)
+  appointmentsBooked Int      @default(0)
+  shows              Int      @default(0)
+  noShows            Int      @default(0)
+  cashCollected      Float    @default(0)
+  note               String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([date, setter, source])
+  @@index([date])
+}
+
 // A webhook event that arrived with a verified signature but matched no
 // lead — held here instead of being silently dropped, so it can be
 // assigned to the right lead in one click from /sales/crm/unmatched.

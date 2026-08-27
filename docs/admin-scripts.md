@@ -37,15 +37,20 @@ running these:
   of `CLAUDE.md`). Inputs: `lead_name` (exact, case-insensitive) or
   `lead_id` (required if the name matches more than one lead — get it
   from Debug webhooks or Backlog review's output), `email`.
-- **Log outreach** (`scripts/log-outreach.ts`) — logs the daily
-  outreach numbers `/dashboard` shows (DMs sent, positive replies,
-  messages sent, Skool members joined) — none of which any integration
-  tracks automatically. Fed by the daily Slack check-in Routine.
-  Inputs (all optional; only the ones given get logged): `date`
-  (`YYYY-MM-DD`, defaults to today), `dms_sent`, `positive_replies`,
-  `messages_sent`, `skool_members_joined`. Upserts by
-  department="outreach" + kpiName + date, so re-running for the same
-  day corrects the existing row instead of duplicating it.
+- **Log outreach** (`scripts/log-outreach.ts`) — logs one
+  date+setter+source's cold-outbound numbers that `/dashboard`,
+  `/dashboard/outbound`, and `/dashboard/appointments` show (DMs sent,
+  replies, positive replies, members joined, appointments
+  booked/shows/no-shows, cash) — none of which any integration tracks
+  automatically (no Skool/LinkedIn/Instagram API). Fed by the daily
+  Slack check-in Routine. Inputs: `date` (`YYYY-MM-DD`, defaults to
+  today), `setter` (`Marko` | `DMdroid`, required), `source` (`Skool` |
+  `LinkedIn` | `Instagram`, required); `dms_sent`, `replies_received`,
+  `positive_replies`, `members_joined`, `appointments_booked`, `shows`,
+  `no_shows`, `cash_collected` (all optional, default 0). Upserts on
+  OutreachLog's own (date, setter, source) unique constraint, so
+  re-running the same combination corrects the existing row instead of
+  duplicating it.
 
 All six require the same `DATABASE_URL` / `TURSO_AUTH_TOKEN` repo
 secrets as `build-check.yml` (Settings → Secrets and variables →

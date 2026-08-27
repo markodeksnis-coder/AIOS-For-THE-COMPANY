@@ -1,19 +1,18 @@
 // Manual, WRITE utility (same category as resolve-issue.ts/set-lead-email.ts)
-// — logs the daily outreach numbers (DMs sent, positive replies, messages
-// sent, Skool members joined) that /dashboard shows but nothing in this app
-// tracks automatically. Fed by the daily Slack check-in: one Routine asks
-// Marko for the numbers, a second Routine reads his reply and runs this
-// script to log them.
+// — logs one date+setter+source's cold-outbound numbers into OutreachLog,
+// the table the /dashboard, /dashboard/outbound, and /dashboard/appointments
+// pages read from. Fed by the daily Slack check-in: one Routine asks Marko
+// for the numbers, a second Routine reads his reply and runs this script to
+// log them.
 //
-// Upserts (by department="outreach" + kpiName + date) rather than always
-// inserting, so re-running for the same day (a correction, a retry) updates
-// the existing row instead of creating a duplicate — ScorecardEntry has no
-// unique constraint across those three columns, so this does the find-then-
-// update/create by hand instead of a real DB-level upsert.
+// Upserts on OutreachLog's own (date, setter, source) unique constraint, so
+// re-running for the same day/setter/source (a correction, a retry) updates
+// the existing row instead of creating a duplicate.
 //
-// Inputs (all optional — only the ones provided get logged): DATE
-// (YYYY-MM-DD, defaults to today), DMS_SENT, POSITIVE_REPLIES,
-// MESSAGES_SENT, SKOOL_MEMBERS_JOINED.
+// Required: DATE (YYYY-MM-DD), SETTER ("Marko" | "DMdroid"), SOURCE
+// ("Skool" | "LinkedIn" | "Instagram"). Optional (default 0 if unset):
+// DMS_SENT, REPLIES_RECEIVED, POSITIVE_REPLIES, MEMBERS_JOINED,
+// APPOINTMENTS_BOOKED, SHOWS, NO_SHOWS, CASH_COLLECTED.
 
 import process from "node:process";
 
@@ -28,13 +27,26 @@ try {
   // no .env file — fine, running in CI with real env vars already set.
 }
 
-const DEPARTMENT = "outreach";
-const METRICS: { envVar: string; kpiName: string }[] = [
-  { envVar: "DMS_SENT", kpiName: "DMs sent" },
-  { envVar: "POSITIVE_REPLIES", kpiName: "Positive replies" },
-  { envVar: "MESSAGES_SENT", kpiName: "Messages sent" },
-  { envVar: "SKOOL_MEMBERS_JOINED", kpiName: "Skool members joined" },
+const SETTERS = ["Marko", "DMdroid"];
+const SOURCES = ["Skool", "LinkedIn", "Instagram"];
+
+const INT_FIELDS: { envVar: string; column: string }[] = [
+  { envVar: "DMS_SENT", column: "dmsSent" },
+  { envVar: "REPLIES_RECEIVED", column: "repliesReceived" },
+  { envVar: "POSITIVE_REPLIES", column: "positiveReplies" },
+  { envVar: "MEMBERS_JOINED", column: "membersJoined" },
+  { envVar: "APPOINTMENTS_BOOKED", column: "appointmentsBooked" },
+  { envVar: "SHOWS", column: "shows" },
+  { envVar: "NO_SHOWS", column: "noShows" },
 ];
+
+function parseIntEnv(envVar: string): number {
+  const raw = process.env[envVar]?.trim();
+  if (!raw) return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error(`${envVar}="${raw}" isn't a number`);
+  return Math.round(n);
+}
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -43,40 +55,36 @@ async function main() {
   const date = process.env.DATE?.trim() || new Date().toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`DATE "${date}" isn't YYYY-MM-DD`);
 
-  const toLog = METRICS.map((m) => ({ ...m, raw: process.env[m.envVar]?.trim() })).filter(
-    (m): m is { envVar: string; kpiName: string; raw: string } => Boolean(m.raw)
-  );
-  if (toLog.length === 0) {
-    throw new Error("None of DMS_SENT, POSITIVE_REPLIES, MESSAGES_SENT, SKOOL_MEMBERS_JOINED were set");
-  }
-  for (const m of toLog) {
-    if (!Number.isFinite(Number(m.raw))) throw new Error(`${m.envVar}="${m.raw}" isn't a number`);
-  }
+  const setter = process.env.SETTER?.trim();
+  if (!setter) throw new Error("SETTER is not set");
+  if (!SETTERS.includes(setter)) throw new Error(`SETTER "${setter}" must be one of ${SETTERS.join(", ")}`);
+
+  const source = process.env.SOURCE?.trim();
+  if (!source) throw new Error("SOURCE is not set");
+  if (!SOURCES.includes(source)) throw new Error(`SOURCE "${source}" must be one of ${SOURCES.join(", ")}`);
+
+  const cashRaw = process.env.CASH_COLLECTED?.trim();
+  const cashCollected = cashRaw ? Number(cashRaw) : 0;
+  if (!Number.isFinite(cashCollected)) throw new Error(`CASH_COLLECTED="${cashRaw}" isn't a number`);
+
+  const values: Record<string, number> = { cashCollected };
+  for (const { envVar, column } of INT_FIELDS) values[column] = parseIntEnv(envVar);
 
   const { createClient } = await import("@libsql/client");
   const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 
-  for (const { kpiName, raw } of toLog) {
-    const value = Number(raw);
-    const existing = await client.execute({
-      sql: `SELECT id FROM ScorecardEntry WHERE department = ? AND kpiName = ? AND period = ?`,
-      args: [DEPARTMENT, kpiName, date],
-    });
-    if (existing.rows.length > 0) {
-      await client.execute({
-        sql: `UPDATE ScorecardEntry SET value = ? WHERE id = ?`,
-        args: [value, existing.rows[0].id as string],
-      });
-      console.log(`log-outreach: updated "${kpiName}" for ${date} -> ${value}`);
-    } else {
-      await client.execute({
-        sql: `INSERT INTO ScorecardEntry (id, department, kpiName, period, value, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [crypto.randomUUID(), DEPARTMENT, kpiName, date, value, new Date().toISOString()],
-      });
-      console.log(`log-outreach: logged "${kpiName}" for ${date} -> ${value}`);
-    }
-  }
+  const columns = ["dmsSent", "repliesReceived", "positiveReplies", "membersJoined", "appointmentsBooked", "shows", "noShows", "cashCollected"];
+  const now = new Date().toISOString();
 
+  await client.execute({
+    sql: `INSERT INTO OutreachLog (id, date, setter, source, ${columns.join(", ")}, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ${columns.map(() => "?").join(", ")}, ?, ?)
+          ON CONFLICT(date, setter, source) DO UPDATE SET
+          ${columns.map((c) => `${c} = excluded.${c}`).join(", ")}, updatedAt = excluded.updatedAt`,
+    args: [crypto.randomUUID(), date, setter, source, ...columns.map((c) => values[c]), now, now],
+  });
+
+  console.log(`log-outreach: logged ${date} / ${setter} / ${source} ->`, values);
   client.close();
 }
 
