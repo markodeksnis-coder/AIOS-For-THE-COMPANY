@@ -12,8 +12,8 @@
     "sync-brain": "tsx scripts/sync-brain.ts",
     "seed:demo-leads": "tsx prisma/seed.ts",
     "migrate-turso": "tsx scripts/migrate-turso.ts",
-    "predev": "npm run migrate-turso && npm run sync-brain",
-    "prebuild": "npm run migrate-turso && npm run sync-brain"
+    "predev": "prisma generate && npm run migrate-turso && npm run sync-brain",
+    "prebuild": "prisma generate && npm run migrate-turso && npm run sync-brain"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
