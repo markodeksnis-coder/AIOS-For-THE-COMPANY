@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { hrefWith, type DashboardParams } from "@/lib/outreach-url";
 
 const RANGES = [
   { value: "7", label: "7 days" },
@@ -11,59 +12,52 @@ const RANGES = [
 /** Range/setter/source filter chips shared by the Cold Outbound and
  *  Appointment Reporting pages — plain links that toggle one query param
  *  while preserving the others, so filters are shareable/bookmarkable URLs
- *  instead of client-side-only state. */
+ *  instead of client-side-only state.
+ *
+ *  Href building moved to lib/outreach-url so the group-by switch and the
+ *  drill-down rail survive a filter change (they're query params too).
+ *  Changing a filter drops `drill` on purpose: the row you'd drilled into
+ *  may not exist under the new filter. */
 export function FilterBar({
   basePath,
-  range,
-  setter,
-  source,
+  params,
   setters,
   sources,
 }: {
   basePath: string;
-  range: string;
-  setter: string;
-  source: string;
+  params: DashboardParams;
   setters: readonly string[];
   sources: readonly string[];
 }) {
-  const buildHref = (next: { range?: string; setter?: string; source?: string }) => {
-    const params = new URLSearchParams();
-    const r = next.range ?? range;
-    const s = next.setter ?? setter;
-    const src = next.source ?? source;
-    if (r !== "30") params.set("range", r);
-    if (s !== "all") params.set("setter", s);
-    if (src !== "all") params.set("source", src);
-    const qs = params.toString();
-    return qs ? `${basePath}?${qs}` : basePath;
-  };
-
   return (
     <div className="mb-6 flex flex-wrap items-center gap-4">
       <ChipGroup label="Range">
         {RANGES.map((r) => (
-          <Chip key={r.value} active={r.value === range} href={buildHref({ range: r.value })}>
+          <Chip
+            key={r.value}
+            active={r.value === params.range}
+            href={hrefWith(basePath, params, { range: r.value, drill: null })}
+          >
             {r.label}
           </Chip>
         ))}
       </ChipGroup>
       <ChipGroup label="Setter">
-        <Chip active={setter === "all"} href={buildHref({ setter: "all" })}>
+        <Chip active={params.setter === "all"} href={hrefWith(basePath, params, { setter: "all", drill: null })}>
           All
         </Chip>
         {setters.map((s) => (
-          <Chip key={s} active={setter === s} href={buildHref({ setter: s })}>
+          <Chip key={s} active={params.setter === s} href={hrefWith(basePath, params, { setter: s, drill: null })}>
             {s}
           </Chip>
         ))}
       </ChipGroup>
       <ChipGroup label="Source">
-        <Chip active={source === "all"} href={buildHref({ source: "all" })}>
+        <Chip active={params.source === "all"} href={hrefWith(basePath, params, { source: "all", drill: null })}>
           All
         </Chip>
         {sources.map((s) => (
-          <Chip key={s} active={source === s} href={buildHref({ source: s })}>
+          <Chip key={s} active={params.source === s} href={hrefWith(basePath, params, { source: s, drill: null })}>
             {s}
           </Chip>
         ))}

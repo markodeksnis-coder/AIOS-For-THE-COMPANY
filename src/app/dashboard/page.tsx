@@ -1,74 +1,132 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { Card } from "@/components/ui/card";
 import { DashboardTabs } from "@/components/outreach/dashboard-tabs";
+import { StatTile, BreakdownTable } from "@/components/outreach/breakdown-table";
+import { OutreachChart } from "@/components/outreach/outreach-chart";
 import { computeCallMetrics } from "@/lib/crm";
-import { sumOutreach } from "@/lib/outreach";
+import { sumOutreach, groupTotals, dailySeries, type GroupTotals } from "@/lib/outreach";
 
 export const dynamic = "force-dynamic";
 
+/** Overview: today's numbers up top (the question "how are we doing right
+ *  now"), then a 30-day trend and a per-setter rollup so a bad today can be
+ *  read against the trend instead of in isolation. Deliberately no filters
+ *  here — filtering lives on the two detail tabs; this one is always
+ *  "everything, today". */
 export default async function DashboardPage() {
   const now = new Date();
   const todayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+  const since = new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
 
-  const [todaysCalls, todaysOutreach] = await Promise.all([
+  const [todaysCalls, todaysOutreach, trailing] = await Promise.all([
     db.salesCall.findMany({ where: { scheduledAt: todayStr } }),
     db.outreachLog.findMany({ where: { date: todayStr } }),
+    db.outreachLog.findMany({ where: { date: { gte: since } }, orderBy: { date: "asc" } }),
   ]);
 
   const callStats = computeCallMetrics(todaysCalls);
-  const outreachStats = sumOutreach(todaysOutreach);
+  const today = sumOutreach(todaysOutreach);
+  const month = sumOutreach(trailing);
+  const bySetter = groupTotals(trailing, "setter");
+  const series = dailySeries(trailing, "dmsSent", "membersJoined");
 
   return (
     <div>
       <div className="mb-6">
         <div className="font-mono text-[0.6875rem] uppercase tracking-widest text-text-faint">Company · Dashboard</div>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-[0.88rem] text-text-dim">Everything that matters, today — calls straight from the CRM, outreach logged by hand.</p>
+        <p className="mt-1 max-w-[78ch] text-[0.88rem] text-text-dim">
+          Everything that matters, today — calls straight from the CRM, outreach logged by hand at the daily check-in.
+          Drill into any of it from{" "}
+          <Link href="/dashboard/outbound" className="text-accent-strong">
+            Cold Outbound
+          </Link>{" "}
+          or{" "}
+          <Link href="/dashboard/appointments" className="text-accent-strong">
+            Appointment Reporting
+          </Link>
+          .
+        </p>
       </div>
 
       <DashboardTabs active="/dashboard" />
 
       <section className="mb-8">
         <h2 className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
-          Sales calls (today, from the CRM)
+          Today
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatTile label="Calls booked" value={String(callStats.booked)} />
-          <StatTile label="Calls conducted" value={String(callStats.conducted)} />
-          <StatTile label="Show rate" value={`${callStats.showRate}%`} good />
-          <StatTile label="Close rate" value={`${callStats.closeRate}%`} good />
-          <StatTile label="Cash collected" value={`$${callStats.cash.toLocaleString()}`} good />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <StatTile
+            label="Members joined"
+            value={String(today.membersJoined)}
+            sub={`${today.joinRate}% of positive replies`}
+            good
+          />
+          <StatTile
+            label="Sales calls taken"
+            value={String(callStats.conducted)}
+            sub={`${callStats.booked} booked · ${callStats.showRate}% show`}
+          />
+          <StatTile label="DMs sent" value={String(today.dmsSent)} sub={`${today.replyRate}% reply rate`} />
+          <StatTile
+            label="Messages seen"
+            value={today.dmsSent > 0 && today.messagesSeen === 0 ? "—" : String(today.messagesSeen)}
+            sub={today.messagesSeen > 0 ? `${today.seenRate}% seen rate` : "Log it at check-in"}
+            pending={today.dmsSent > 0 && today.messagesSeen === 0}
+          />
+          <StatTile
+            label="Posts replied to"
+            value={String(today.repliesReceived)}
+            sub={`${today.positiveReplies} positive`}
+          />
+          <StatTile
+            label="Cash collected"
+            value={`$${(today.cashCollected + callStats.cash).toLocaleString()}`}
+            sub={`${callStats.closeRate}% close rate`}
+            good
+          />
         </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
+          Last 30 days
+        </h2>
+        <OutreachChart
+          title="DMs sent & members joined — last 30 days"
+          points={series}
+          primaryLabel="DMs sent"
+          secondaryLabel="members joined"
+        />
       </section>
 
       <section>
-        <h2 className="mb-3 flex items-center justify-between font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
-          <span>Outreach (today, logged by hand)</span>
-          <span className="normal-case">
-            <Link href="/dashboard/outbound" className="text-accent-strong">Cold Outbound</Link>
-            {" · "}
-            <Link href="/dashboard/appointments" className="text-accent-strong">Appointment Reporting</Link>
-          </span>
+        <h2 className="mb-3 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">
+          Team rollup (last 30 days)
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatTile label="DMs sent" value={String(outreachStats.dmsSent)} />
-          <StatTile label="Reply rate" value={`${outreachStats.replyRate}%`} good />
-          <StatTile label="Positive replies" value={String(outreachStats.positiveReplies)} />
-          <StatTile label="Members joined" value={String(outreachStats.membersJoined)} good />
-          <StatTile label="Appointments booked" value={String(outreachStats.appointmentsBooked)} />
-          <StatTile label="Show rate" value={`${outreachStats.showRate}%`} good />
-        </div>
+        <BreakdownTable<GroupTotals>
+          rows={bySetter}
+          keyFor={(r) => r.key}
+          hrefFor={(r) => `/dashboard/outbound?group=setter&drill=setter:${encodeURIComponent(r.key)}`}
+          empty="No outreach logged in the last 30 days."
+          footNote={`Sales-call numbers come from SalesCall via computeCallMetrics(); everything else from OutreachLog. Period total: ${month.dmsSent.toLocaleString()} DMs, ${month.membersJoined} members joined.`}
+          columns={[
+            { label: "Setter", strong: true, cell: (r) => r.key },
+            { label: "DMs sent", align: "right", mono: true, cell: (r) => r.dmsSent.toLocaleString() },
+            { label: "Replies", align: "right", mono: true, cell: (r) => r.repliesReceived },
+            { label: "Reply %", align: "right", mono: true, cell: (r) => `${r.replyRate}%` },
+            { label: "Members", align: "right", mono: true, good: true, cell: (r) => r.membersJoined },
+            { label: "Booked", align: "right", mono: true, cell: (r) => r.appointmentsBooked },
+            {
+              label: "Cash",
+              align: "right",
+              mono: true,
+              good: true,
+              cell: (r) => `$${r.cashCollected.toLocaleString()}`,
+            },
+          ]}
+        />
       </section>
     </div>
-  );
-}
-
-function StatTile({ label, value, good }: { label: string; value: string; good?: boolean }) {
-  return (
-    <Card className="p-3">
-      <div className="text-[0.68rem] text-text-faint">{label}</div>
-      <div className={`mt-0.5 font-mono text-[1.1rem] font-bold ${good ? "text-good" : "text-foreground"}`}>{value}</div>
-    </Card>
   );
 }

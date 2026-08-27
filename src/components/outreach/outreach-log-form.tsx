@@ -69,6 +69,7 @@ export function OutreachLogForm() {
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <NumberField name="dmsSent" label="DMs sent" />
+          <NumberField name="messagesSeen" label="Messages seen" />
           <NumberField name="repliesReceived" label="Replies" />
           <NumberField name="positiveReplies" label="Positive replies" />
           <NumberField name="membersJoined" label="Members joined" />

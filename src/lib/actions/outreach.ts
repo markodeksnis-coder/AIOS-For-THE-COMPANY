@@ -35,6 +35,7 @@ export async function upsertOutreachLog(formData: FormData) {
 
   const data = {
     dmsSent: int(formData, "dmsSent"),
+    messagesSeen: int(formData, "messagesSeen"),
     repliesReceived: int(formData, "repliesReceived"),
     positiveReplies: int(formData, "positiveReplies"),
     membersJoined: int(formData, "membersJoined"),

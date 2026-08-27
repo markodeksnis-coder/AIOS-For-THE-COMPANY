@@ -388,6 +388,7 @@ model OutreachLog {
   setter             String // e.g. "Marko", "DMdroid"
   source             String // e.g. "Skool", "LinkedIn", "Instagram"
   dmsSent            Int      @default(0)
+  messagesSeen       Int      @default(0) // of dmsSent, how many were opened/seen — hand-logged
   repliesReceived    Int      @default(0)
   positiveReplies    Int      @default(0)
   membersJoined      Int      @default(0)
