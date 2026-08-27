@@ -1,0 +1,48 @@
+name: Seed outreach
+
+# Manual WRITE utility against the real production database — fills
+# OutreachLog with a deterministic backlog of cold-outbound days so the
+# /dashboard, /dashboard/outbound and /dashboard/appointments pages have
+# history to show before the daily Slack check-in has built up real data.
+#
+# Upserts on (date, setter, source), same as Log outreach — re-running
+# rewrites the same days instead of duplicating them. Run with mode=check
+# first if you only want to see what's already in the table.
+#
+# Never runs automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "seed (write rows) | check (read-only report)"
+        required: true
+        default: "seed"
+        type: choice
+        options:
+          - seed
+          - check
+      days:
+        description: "How many days back to fill — default 30"
+        required: false
+      end_date:
+        description: "Last day to fill (YYYY-MM-DD) — defaults to today"
+        required: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/seed-outreach.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          MODE: ${{ github.event.inputs.mode }}
+          DAYS: ${{ github.event.inputs.days }}
+          END_DATE: ${{ github.event.inputs.end_date }}
