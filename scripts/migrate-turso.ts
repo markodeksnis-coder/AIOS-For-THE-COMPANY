@@ -33,6 +33,21 @@ try {
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
 
 async function main() {
+  // Preview and Production deployments share the same Turso database (no
+  // separate branch DB) — when a PR's Preview build and the Production
+  // build from merging that PR land close together, both used to run this
+  // against the DB at nearly the same time. One write wins, the other hits
+  // a conflict, and that build fails outright — exactly the "every
+  // deployment fails until I manually redeploy" pattern, since the manual
+  // redeploy runs in isolation and just finds everything already applied.
+  // Only Production needs to actually run this; Vercel sets VERCEL_ENV
+  // automatically, so Preview can skip it and read what Production already
+  // migrated.
+  if (process.env.VERCEL_ENV === "preview") {
+    console.log("migrate-turso: skipping on a Vercel Preview build — Preview shares Production's Turso database.");
+    process.exit(0);
+  }
+
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
 
