@@ -90,6 +90,16 @@ async function main() {
     );
   }
 
+  console.log("\n=== Daily cron: last 14 CronRun rows ===");
+  const cronRuns = await client.execute(`SELECT date, ok, reason, lastAt FROM CronRun ORDER BY date DESC LIMIT 14`);
+  if (cronRuns.rows.length === 0) {
+    console.log("(none — /api/cron/daily has never been hit at all, not even with a missing/wrong secret)");
+  } else {
+    for (const r of cronRuns.rows) {
+      console.log(`  ${r.date} | ok=${r.ok} | ${r.reason} | last hit ${r.lastAt}`);
+    }
+  }
+
   console.log("\n=== Active agents: last daily_digest run per agent ===");
   const activeAgents = await client.execute(
     `SELECT slug, title, department FROM BrainFile WHERE type = 'agent' AND status = 'active' ORDER BY department, title`
