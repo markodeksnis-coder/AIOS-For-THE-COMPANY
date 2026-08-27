@@ -10,14 +10,39 @@ const SETUP_DOCS_BASE_URL = "https://github.com/markodeksnis-coder/AIOS-For-THE-
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const [leads, fathomCallCount, calendlyLeadCount] = await Promise.all([
-    db.lead.findMany({ orderBy: { order: "asc" }, include: { calls: true } }),
+// Everything on this page that's actually date-bound (the today/week/month
+// tabs, the 30-day chart, today's/this-week's queues, the source/rep
+// breakdown tables) only ever looks at recent calls — but this used to
+// fetch every SalesCall ever logged for every lead (`include: { calls: true
+// }`, unbounded), on every page load. Leads themselves stay unscoped
+// (reactivationLeads specifically needs to find OLD, inactive leads, and
+// freshLeads sorts by the lead's own createdAt) — only the call join is
+// bounded. ?range=all is the explicit widen-it escape hatch.
+const DEFAULT_RANGE_DAYS = 90;
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range } = await searchParams;
+  const showAllCalls = range === "all";
+  const callsSinceStr = new Date(Date.now() - DEFAULT_RANGE_DAYS * 86_400_000).toISOString().slice(0, 10);
+
+  const [leads, allCalls, fathomCallCount, calendlyLeadCount] = await Promise.all([
+    db.lead.findMany({ orderBy: { order: "asc" } }),
+    db.salesCall.findMany({ where: showAllCalls ? undefined : { scheduledAt: { gte: callsSinceStr } } }),
     db.salesCall.count({ where: { fathomRecordingId: { not: null } } }),
     db.lead.count({ where: { calendlyEventUri: { not: null } } }),
   ]);
 
-  const allCalls = leads.flatMap((l) => l.calls);
+  const callsByLeadId = new Map<string, typeof allCalls>();
+  for (const call of allCalls) {
+    const bucket = callsByLeadId.get(call.leadId);
+    if (bucket) bucket.push(call);
+    else callsByLeadId.set(call.leadId, [call]);
+  }
+  const leadById = new Map(leads.map((l) => [l.id, l]));
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -85,10 +110,11 @@ export default async function DashboardPage() {
     };
   });
 
-  const callsBySource = leads.flatMap((l) => l.calls.map((c) => ({ key: l.source ?? "(no source)", ...c })));
+  const callsBySource = allCalls.map((c) => ({ key: leadById.get(c.leadId)?.source ?? "(no source)", ...c }));
   const callsByRep = allCalls.map((c) => ({ key: c.rep ?? "(unassigned)", ...c }));
 
-  const latestCall = (l: (typeof leads)[number]) => [...l.calls].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0];
+  const latestCall = (l: (typeof leads)[number]) =>
+    [...(callsByLeadId.get(l.id) ?? [])].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0];
   const todaysNoShows = leads.filter((l) => l.stage === "no_show" && latestCall(l)?.scheduledAt === todayStr);
   const weeksClosedLost = leads.filter(
     (l) => l.stage === "closed_lost" && (latestCall(l)?.scheduledAt ?? "") >= weekAgoStr
@@ -149,7 +175,24 @@ export default async function DashboardPage() {
         </div>
       </Section>
 
-      <Section title="Breakdowns" last>
+      <Section
+        title="Breakdowns"
+        last
+        action={
+          <span className="font-mono text-[0.7rem] font-normal normal-case text-text-faint">
+            {showAllCalls ? (
+              <>
+                All-time · <Link href="/sales/crm/dashboard" className="text-accent-strong">Last {DEFAULT_RANGE_DAYS} days</Link>
+              </>
+            ) : (
+              <>
+                Last {DEFAULT_RANGE_DAYS} days ·{" "}
+                <Link href="/sales/crm/dashboard?range=all" className="text-accent-strong">All-time</Link>
+              </>
+            )}
+          </span>
+        }
+      >
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <BreakdownTable title="Pipeline by source" rows={breakdownRows(callsBySource)} />
           <BreakdownTable title="By rep" rows={breakdownRows(callsByRep)} />
@@ -162,10 +205,23 @@ export default async function DashboardPage() {
 /** Labeled, visually separated block — the dashboard used to be one long
  *  scroll of stat tiles, a chart, five queue cards, and two tables with no
  *  grouping; this makes each concern its own clearly bounded section. */
-function Section({ title, last = false, children }: { title: string; last?: boolean; children: React.ReactNode }) {
+function Section({
+  title,
+  action,
+  last = false,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div className={last ? "" : "mb-8 border-b border-border pb-8"}>
-      <h2 className="mb-4 font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">{title}</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-mono text-[0.7rem] font-bold uppercase tracking-widest text-text-faint">{title}</h2>
+        {action}
+      </div>
       {children}
     </div>
   );
