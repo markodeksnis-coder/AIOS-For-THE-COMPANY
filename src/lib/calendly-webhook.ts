@@ -56,7 +56,10 @@ export async function processCalendlyWebhook(rawBody: string, signatureHeader: s
 
 async function handleCanceled(payload: CalendlyInviteePayload["payload"], eventType: string): Promise<CalendlyWebhookResult> {
   const inviteeUri = payload.uri ?? null;
-  const email = payload.email?.trim() ?? null;
+  // Lowercased so this matches regardless of how Calendly (or the invitee's
+  // browser autofill) happened to capitalize the email on this particular
+  // delivery — Lead.email is always stored lowercase (see handleCreated).
+  const email = payload.email?.trim().toLowerCase() ?? null;
 
   // A single updateMany instead of findUnique-then-update — Calendly does
   // retry deliveries, and two near-simultaneous cancellations for the same
@@ -88,7 +91,11 @@ async function handleCanceled(payload: CalendlyInviteePayload["payload"], eventT
 }
 
 async function handleCreated(payload: CalendlyInviteePayload["payload"], eventType: string): Promise<CalendlyWebhookResult> {
-  const email = payload.email?.trim();
+  // Lowercased at the point of entry so every write and every lookup below
+  // agrees — two bookings from the same person with differently-cased email
+  // capitalization used to create two separate leads (findFirst below is an
+  // exact-string match). Lead.email now always holds a lowercase value.
+  const email = payload.email?.trim().toLowerCase();
   if (!email) {
     await logEvent({ status: "error", message: "Booking payload had no invitee email.", eventType });
     return { status: 400, body: { error: "Payload had no invitee email." } };

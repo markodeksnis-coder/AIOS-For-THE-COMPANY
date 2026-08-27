@@ -69,6 +69,11 @@ describe("createLead", () => {
     );
     expect(redirectMock).toHaveBeenCalledWith("/sales/crm/lead1");
   });
+
+  it("lowercases a hand-typed email so it matches how the Calendly webhook stores/looks up the same address", async () => {
+    await createLead(formData({ name: "Josh Kennedy", email: "Josh.Kennedy@Gmail.com" }));
+    expect(dbMock.lead.create.mock.calls[0][0].data.email).toBe("josh.kennedy@gmail.com");
+  });
 });
 
 describe("updateLead", () => {
@@ -81,6 +86,11 @@ describe("updateLead", () => {
     expect(dbMock.lead.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "lead1" }, data: expect.objectContaining({ name: "New Name", email: "a@b.com" }) })
     );
+  });
+
+  it("lowercases a hand-typed email", async () => {
+    await updateLead("lead1", formData({ name: "New Name", email: "A@B.COM" }));
+    expect(dbMock.lead.update.mock.calls[0][0].data.email).toBe("a@b.com");
   });
 });
 
@@ -160,6 +170,14 @@ describe("importLeadsCsv", () => {
       { name: "Josh Kennedy", email: "JOSH@example.com", phone: null, company: null, source: null, notes: null },
     ]);
     expect(result).toEqual({ created: 0, skipped: 1 });
+  });
+
+  it("stores a mixed-case CSV email lowercase, so it can't create a case-variant duplicate later", async () => {
+    dbMock.lead.findMany.mockResolvedValue([]);
+    await importLeadsCsv([
+      { name: "Josh Kennedy", email: "Josh.Kennedy@Gmail.com", phone: null, company: null, source: null, notes: null },
+    ]);
+    expect(dbMock.lead.createMany.mock.calls[0][0].data[0].email).toBe("josh.kennedy@gmail.com");
   });
 
   it("skips a row whose phone already exists in the database", async () => {

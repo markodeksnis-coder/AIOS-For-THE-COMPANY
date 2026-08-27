@@ -139,7 +139,13 @@ model CoachingNote {
 model Lead {
   id               String   @id @default(cuid())
   name             String
-  email            String?
+  // Always stored lowercase (every write path normalizes it) so this
+  // constraint actually catches case-variant duplicates, not just
+  // byte-identical ones — a real production duplicate (two bookings from
+  // the same person, different email capitalization) is what surfaced this.
+  // SQLite/Turso allow any number of NULLs alongside a UNIQUE constraint,
+  // so leads with no email on file are unaffected.
+  email            String?  @unique
   phone            String?
   company          String?
   timezone         String?
