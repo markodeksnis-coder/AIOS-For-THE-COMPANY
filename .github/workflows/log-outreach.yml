@@ -1,0 +1,45 @@
+name: Log outreach
+
+# Manual WRITE utility against the real production database — logs the
+# daily outreach numbers (DMs sent, positive replies, messages sent, Skool
+# members joined) that /dashboard shows. Fed by the daily Slack check-in.
+# Never runs automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD — defaults to today if left blank"
+        required: false
+      dms_sent:
+        description: "DMs sent"
+        required: false
+      positive_replies:
+        description: "Positive replies"
+        required: false
+      messages_sent:
+        description: "Messages sent"
+        required: false
+      skool_members_joined:
+        description: "Skool members joined"
+        required: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/log-outreach.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          DATE: ${{ github.event.inputs.date }}
+          DMS_SENT: ${{ github.event.inputs.dms_sent }}
+          POSITIVE_REPLIES: ${{ github.event.inputs.positive_replies }}
+          MESSAGES_SENT: ${{ github.event.inputs.messages_sent }}
+          SKOOL_MEMBERS_JOINED: ${{ github.event.inputs.skool_members_joined }}
