@@ -349,6 +349,25 @@ model WebhookEvent {
   @@index([source, createdAt])
 }
 
+// One row per calendar day (UTC) the daily cron (/api/cron/daily) was hit,
+// regardless of outcome — including a missing CRON_SECRET or a bad auth
+// header, which the route itself rejects before writing anything else. A
+// misconfigured cron looks, from inside the app, exactly like it never ran
+// at all (no AgentActivity, no error anywhere a human would see it), and
+// Vercel's own function logs aren't reachable from a Claude Code session in
+// this sandbox — so this is the only way to tell "never invoked at all"
+// (Vercel Cron Jobs not registered / wrong plan) apart from "invoked but
+// rejected" (env var problem) from inside the app. Keyed by date, not an
+// append-only log, so a scheduler retry or a stray unauthenticated hit
+// can't grow this table.
+model CronRun {
+  id     String   @id @default(cuid())
+  date   String   @unique // YYYY-MM-DD (UTC)
+  lastAt DateTime @default(now())
+  ok     Boolean
+  reason String // "missing_cron_secret_env" | "unauthorized" | "missing_anthropic_api_key" | "success"
+}
+
 // A webhook event that arrived with a verified signature but matched no
 // lead — held here instead of being silently dropped, so it can be
 // assigned to the right lead in one click from /sales/crm/unmatched.

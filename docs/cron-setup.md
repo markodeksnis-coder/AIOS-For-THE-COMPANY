@@ -65,13 +65,30 @@ is actually listed and enabled — that page is the source of truth for
 
 ## 3. How to verify it's actually running, after fixing the above
 
-Run the **Debug webhooks** admin script (see `docs/admin-scripts.md`) —
-its "Active agents" section prints when each agent last ran its
-`daily_digest`. After the next scheduled run (or after manually hitting
-`/api/cron/daily` with the right `Authorization: Bearer` header from
-Vercel's dashboard, if it supports a manual trigger), that timestamp
-should update. If it still doesn't move, the next thing to check is
-Vercel's own function logs for `/api/cron/daily` — those aren't
-reachable from a Claude Code session in this sandbox (see the "Debugging
-a failed Vercel build" section of `CLAUDE.md` for why), so that check has
-to be done by hand, in Vercel's dashboard.
+Run the **Debug webhooks** admin script (see `docs/admin-scripts.md`) and
+check its two cron-related sections:
+
+- **"Daily cron: last 14 CronRun rows"** — one row per UTC calendar day
+  the route was hit *at all*, regardless of outcome (`ok`/`reason`
+  columns). This is the one that actually distinguishes the two failure
+  modes above: **no rows at all** means Vercel never invoked the route
+  (case 2 — cron not registered, wrong plan, or no Production deploy
+  yet); a row with `ok=false, reason=missing_cron_secret_env` or
+  `reason=unauthorized` means it *was* invoked but rejected (case 1);
+  `ok=true, reason=success` means it actually ran the agents and the
+  sweep. Written by `recordCronRun()` in the route itself, on every
+  single branch including the earliest auth rejections — added because
+  before this, a rejected invocation wrote nothing anywhere a human
+  could see, which looked identical to "never invoked."
+- **"Active agents: last daily_digest run per agent"** — confirms the
+  agents' own work actually happened, not just that the route returned
+  200.
+
+After the next scheduled run (or after manually hitting `/api/cron/daily`
+with the right `Authorization: Bearer` header from Vercel's dashboard, if
+it supports a manual trigger), both should update. If `CronRun` still
+shows zero rows after that, the next thing to check is Vercel's own
+function logs for `/api/cron/daily` — those aren't reachable from a
+Claude Code session in this sandbox (see the "Debugging a failed Vercel
+build" section of `CLAUDE.md` for why), so that check has to be done by
+hand, in Vercel's dashboard.

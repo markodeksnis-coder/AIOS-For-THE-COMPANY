@@ -49,6 +49,25 @@ async function ensureWeeklyDebriefReviewIssue() {
   });
 }
 
+/** Every branch of GET() below calls this before returning — including the
+ *  earliest auth-rejection branches — so a misconfigured cron leaves a
+ *  trace even though nothing else in the route runs. Keyed by UTC date via
+ *  upsert, so this can't be grown by a scheduler retry or a stray
+ *  unauthenticated hit. Never throws — a logging failure must not turn a
+ *  real cron failure into an unhandled exception. */
+async function recordCronRun(ok: boolean, reason: string) {
+  const date = new Date().toISOString().slice(0, 10);
+  try {
+    await db.cronRun.upsert({
+      where: { date },
+      create: { date, ok, reason },
+      update: { ok, reason, lastAt: new Date() },
+    });
+  } catch (err) {
+    console.error("Failed to record cron run:", err);
+  }
+}
+
 type RunResult =
   | { slug: string; ok: true; summary: string; actionCount: number }
   | { slug: string; ok: false; error: string };
@@ -82,18 +101,21 @@ async function runOne(agent: { id: string; slug: string; title: string; departme
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
+    await recordCronRun(false, "missing_cron_secret_env");
     return NextResponse.json(
       { error: "CRON_SECRET isn't configured on the server yet — add it in Vercel's env vars." },
       { status: 503 }
     );
   }
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+    await recordCronRun(false, "unauthorized");
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   await ensureWeeklyDebriefReviewIssue();
 
   if (!process.env.ANTHROPIC_API_KEY) {
+    await recordCronRun(false, "missing_anthropic_api_key");
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY isn't configured on the server yet — add it in Vercel's env vars." },
       { status: 503 }
@@ -116,6 +138,8 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     followUpSweep = { ran: false, reason: err instanceof Error ? err.message : "Unknown error" };
   }
+
+  await recordCronRun(true, "success");
 
   return NextResponse.json({ ranAt: new Date().toISOString(), results, followUpSweep });
 }
