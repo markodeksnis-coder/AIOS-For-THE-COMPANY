@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Home,
+  LayoutDashboard,
   Inbox,
   ListTodo,
   FolderKanban,
@@ -44,6 +45,7 @@ export async function Sidebar() {
           style={{ borderLeft: "2px solid var(--graph-people)", backgroundColor: "color-mix(in srgb, var(--graph-people) 6%, transparent)" }}
         >
           <Eyebrow accent="var(--graph-people)">Work</Eyebrow>
+          <NavLink href="/dashboard" icon={LayoutDashboard}>Dashboard</NavLink>
           <NavLink href="/inbox" icon={Inbox}>Inbox</NavLink>
           <NavLink href="/issues" icon={ListTodo}>Issues</NavLink>
           <NavLink href="/projects" icon={FolderKanban}>Projects</NavLink>
