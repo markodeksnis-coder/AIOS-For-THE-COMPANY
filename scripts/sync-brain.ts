@@ -88,6 +88,15 @@ type BrainFileRecord = {
 };
 
 async function main() {
+  // Same reasoning as migrate-turso.ts: Preview and Production share one
+  // Turso database, so a Preview build racing Production's build on this
+  // wipe-and-repopulate is what caused deployments to fail until manually
+  // redeployed. Only Production needs to actually rebuild the index.
+  if (process.env.VERCEL_ENV === "preview") {
+    console.log("sync-brain: skipping on a Vercel Preview build — Preview shares Production's Turso database.");
+    process.exit(0);
+  }
+
   const files = walk(BRAIN_DIR);
   console.log(`Found ${files.length} files in /brain`);
 
