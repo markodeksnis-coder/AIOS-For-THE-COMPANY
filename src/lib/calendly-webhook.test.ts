@@ -126,6 +126,17 @@ describe("processCalendlyWebhook — invitee.created", () => {
     );
   });
 
+  it("lowercases the invitee email before matching/storing, so a differently-capitalized rebooking updates the same lead instead of creating a duplicate", async () => {
+    dbMock.lead.findFirst.mockResolvedValue({ id: "lead1", name: "Josh Kennedy", stage: "closed_lost" });
+    dbMock.lead.update.mockResolvedValue({ id: "lead1", name: "Josh Kennedy" });
+    const raw = invitePayload("invitee.created", { email: "Josh.Kennedy@Example.com" });
+
+    await processCalendlyWebhook(raw, sign(raw));
+
+    expect(dbMock.lead.findFirst).toHaveBeenCalledWith({ where: { email: "josh.kennedy@example.com" } });
+    expect(dbMock.lead.create).not.toHaveBeenCalled();
+  });
+
   it("400s when the invitee payload has no email", async () => {
     const raw = invitePayload("invitee.created", { email: null });
     const result = await processCalendlyWebhook(raw, sign(raw));
@@ -194,6 +205,17 @@ describe("processCalendlyWebhook — invitee.canceled", () => {
     expect(result.body).toMatchObject({ ok: true, cancelled: false });
     expect(dbMock.lead.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { email: "josh@example.com", nextCallAt: { not: null } }, data: { nextCallAt: null } })
+    );
+  });
+
+  it("lowercases the invitee email before the nextCallAt lookup", async () => {
+    dbMock.salesCall.updateMany.mockResolvedValue({ count: 0 });
+    const raw = invitePayload("invitee.canceled", { email: "Josh@Example.COM" });
+
+    await processCalendlyWebhook(raw, sign(raw));
+
+    expect(dbMock.lead.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: "josh@example.com", nextCallAt: { not: null } } })
     );
   });
 });

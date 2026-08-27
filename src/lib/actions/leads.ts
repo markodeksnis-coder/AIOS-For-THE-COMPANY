@@ -37,8 +37,12 @@ function num(formData: FormData, key: string): number | null {
 // the edit form never overwrites whatever those columns actually hold.
 function leadFieldsFromForm(formData: FormData) {
   const nextCallAtRaw = str(formData, "nextCallAt");
+  // Lowercased so a hand-typed email always matches how the Calendly
+  // webhook stores/looks up the same address — Lead.email is unique on its
+  // raw stored value, so two different capitalizations of the same address
+  // would otherwise both be accepted as "different" leads.
   return {
-    email: str(formData, "email"),
+    email: str(formData, "email")?.toLowerCase() ?? null,
     phone: str(formData, "phone"),
     company: str(formData, "company"),
     timezone: str(formData, "timezone"),
@@ -166,9 +170,12 @@ export async function importLeadsCsv(rows: CsvLeadRow[]) {
       skipped++;
       continue;
     }
-    const email = row.email?.trim() || null;
+    // Lowercased for storage too, not just for the dedup comparison below —
+    // otherwise a CSV row could still create a case-variant duplicate of an
+    // email already on file (Lead.email is unique on its raw stored value).
+    const email = row.email?.trim().toLowerCase() || null;
     const phone = row.phone?.trim() || null;
-    const emailKey = email?.toLowerCase() ?? null;
+    const emailKey = email;
 
     const isDuplicate =
       (emailKey !== null && (existingEmails.has(emailKey) || seenEmails.has(emailKey))) ||
