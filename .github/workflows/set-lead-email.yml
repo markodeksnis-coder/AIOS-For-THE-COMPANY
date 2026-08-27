@@ -1,0 +1,36 @@
+name: Set lead email
+
+# Manual WRITE utility against the real production database — backfills a
+# Lead's email when a human has it (e.g. from a Calendly booking form) but
+# the app doesn't. Never runs automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      lead_name:
+        description: "Exact lead name (case-insensitive) — leave blank if using lead_id"
+        required: false
+      lead_id:
+        description: "Exact Lead id — use this instead of lead_name if the name is ambiguous"
+        required: false
+      email:
+        description: "Email to set on the lead"
+        required: true
+
+jobs:
+  set-email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/set-lead-email.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          LEAD_NAME: ${{ github.event.inputs.lead_name }}
+          LEAD_ID: ${{ github.event.inputs.lead_id }}
+          EMAIL: ${{ github.event.inputs.email }}
