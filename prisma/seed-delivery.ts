@@ -46,7 +46,7 @@ const DEMO_CLIENTS = [
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set.");
-  const adapter = new PrismaLibSQL({ url });
+  const adapter = new PrismaLibSQL({ url, authToken: process.env.TURSO_AUTH_TOKEN });
   const db = new PrismaClient({ adapter });
 
   let created = 0;
