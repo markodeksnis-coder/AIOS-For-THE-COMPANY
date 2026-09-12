@@ -404,6 +404,34 @@ model OutreachLog {
   @@index([date])
 }
 
+// One client in the 180-day service delivery programme (post-sale — this
+// starts where Lead.stage reaches "closed_won"). Every milestone date in
+// the Journey view is computed from `startDate` at render time, never
+// stored, so moving the start date moves the whole programme.
+model DeliveryClient {
+  id           String   @id @default(cuid())
+  name         String
+  business     String // e.g. "Nordic Strength · gym owner"
+  startDate    String // ISO date (YYYY-MM-DD) — Day 0 of the 180-day programme
+  system       String? // "Divine Supercharge" | "Cold Email" | "Cold DMs" | null until assigned
+  platform     String? // "Instagram" | "LinkedIn" — only meaningful for Cold DMs
+  delivered    Int      @default(0) // calls delivered so far, against the programme's call target
+  // JSON map of programme day -> "all" | "partial", e.g. {"0":"all","1":"all"} —
+  // marks which Day-0-style checklists / gate checklists are done.
+  done         String   @default("{}")
+  // JSON map of programme day -> "all" | "partial" — homework submitted
+  // after that day's call, checked as the GATE for the next call.
+  homeworkDone String   @default("{}")
+  // JSON map of "<day>:<itemIndex>" -> boolean — local overrides on top of
+  // `done`/`homeworkDone`/deliverable defaults, so ticking one box in the
+  // UI doesn't require re-deriving the whole done/homeworkDone state.
+  ticks        String   @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([system])
+}
+
 // A webhook event that arrived with a verified signature but matched no
 // lead — held here instead of being silently dropped, so it can be
 // assigned to the right lead in one click from /sales/crm/unmatched.

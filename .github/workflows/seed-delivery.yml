@@ -1,0 +1,30 @@
+name: Seed delivery clients
+
+# Manual WRITE utility against the real production database — fills
+# DeliveryClient with 5 example clients so /delivery (Today, Clients,
+# Journey, Assign system) has something to show before real clients are
+# added.
+#
+# Skips any client whose `business` value already exists, same pattern as
+# Seed outreach's upsert — re-running is harmless.
+#
+# Never runs automatically.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsx prisma/seed-delivery.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}

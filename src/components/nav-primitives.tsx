@@ -4,10 +4,14 @@ import type { LucideIcon } from "lucide-react";
 export function NavLink({
   href,
   icon: Icon,
+  badge,
   children,
 }: {
   href: string;
   icon?: LucideIcon;
+  /** A small count pill at the end of the row — e.g. blocked gates,
+   *  unassigned clients. `tone: "crit"` tints it red for "needs attention". */
+  badge?: { count: number; tone?: "crit" | "default" };
   children: React.ReactNode;
 }) {
   return (
@@ -17,6 +21,15 @@ export function NavLink({
     >
       {Icon && <Icon size={15} strokeWidth={2} className="shrink-0 opacity-80" />}
       <span className="flex-1">{children}</span>
+      {badge && badge.count > 0 && (
+        <span
+          className={`rounded-md px-1.5 py-0 font-mono text-[0.62rem] font-bold ${
+            badge.tone === "crit" ? "bg-critical/20 text-critical" : "bg-surface-2 text-text-dim"
+          }`}
+        >
+          {badge.count}
+        </span>
+      )}
     </Link>
   );
 }

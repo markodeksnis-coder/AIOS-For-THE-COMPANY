@@ -11,6 +11,7 @@
     "test": "vitest run",
     "sync-brain": "tsx scripts/sync-brain.ts",
     "seed:demo-leads": "tsx prisma/seed.ts",
+    "seed:demo-delivery": "tsx prisma/seed-delivery.ts",
     "migrate-turso": "tsx scripts/migrate-turso.ts",
     "predev": "prisma generate && npm run migrate-turso && npm run sync-brain",
     "prebuild": "prisma generate && npm run migrate-turso && npm run sync-brain"
